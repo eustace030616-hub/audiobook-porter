@@ -42,7 +42,7 @@ export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
           <div className="relative" ref={control}>
             <button
               type="button"
-              className={`grid h-11 w-11 place-items-center border border-rule text-small font-bold ${
+              className={`grid h-11 w-11 place-items-center border border-rule text-small font-bold tracking-[0.08em] ${
                 open ? 'bg-ink text-paper' : 'bg-surface text-ink'
               }`}
               aria-label={`Account and style for ${username}`}

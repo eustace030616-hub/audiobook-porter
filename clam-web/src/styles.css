@@ -109,7 +109,13 @@
 
   button {
     font: inherit;
+    appearance: none;
+    cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  button:disabled {
+    cursor: default;
   }
 
   a:active {
