@@ -255,8 +255,8 @@ This stage is only the UI and the first manually ported book.
 ## New client: PWA and cached chapters
 
 The React client at `:13379` carries a PWA manifest, service worker, system-theme
-auto mode and a three-slot chapter cache. Full offline support and Home Screen
-install need HTTPS; on the Pi:
+auto mode and a three-slot chapter cache. Full offline support needs HTTPS; on
+the Pi:
 
 ```bash
 sudo tailscale serve --bg --https=443 http://127.0.0.1:13379

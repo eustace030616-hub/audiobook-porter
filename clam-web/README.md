@@ -101,7 +101,8 @@ chapter cache          IndexedDB, split chapter files, 3 slots, oldest evicted
 ```
 
 The service worker only registers in a secure context. `http://berry:13379` is
-plain HTTP, so the worker is skipped there. To use the installed PWA and the
+plain HTTP, so the worker is skipped there. Add to Home Screen may still create
+a shortcut, but there is no offline shell. To use the installed PWA and the
 offline shell, serve the same app through Tailscale HTTPS:
 
 ```bash
