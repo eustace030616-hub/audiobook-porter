@@ -23,3 +23,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .coverage
+node_modules/
+.vite/
+*.tsbuildinfo

@@ -55,3 +55,26 @@ ssh eustace@berry 'sudo journalctl -u shelf -f'
 
 `server.mjs` uses only Node's standard library. `public/` is plain CSS and JS. A deploy
 is an rsync and a restart, so the Pi never needs npm or a toolchain.
+
+## React client preview (port 13379)
+
+`clam-web` runs beside the current client while it is under review. It proxies
+the existing API, auth and audio; the old files and service are untouched.
+
+```bash
+rsync -az --delete clam-web/dist/ eustace@berry:~/shelf/clam-web/dist/
+rsync -az clam-web/server/ eustace@berry:~/shelf/clam-web/server/
+ssh eustace@berry 'systemctl --user daemon-reload'
+ssh eustace@berry 'systemctl --user enable --now clam-web.service'
+```
+
+`clam-web.service` is a **user** unit because the system unit needs sudo to
+install. Linger is already enabled for `eustace`, so it starts at boot. It binds
+`127.0.0.1` and the tailnet address on port 13379; `tailscale serve` is not used
+until the review is accepted.
+
+```bash
+curl -fsS http://127.0.0.1:13379/health
+systemctl --user status clam-web
+journalctl --user -u clam-web -f
+```

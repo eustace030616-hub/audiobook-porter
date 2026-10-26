@@ -1,0 +1,20 @@
+[Unit]
+Description=Clam Web (React client preview, port 13379)
+# User-level unit so it installs without sudo. Linger is enabled for eustace.
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/eustace/shelf/clam-web
+ExecStart=/usr/local/bin/node server/server.mjs
+Environment=CLAM_ORIGIN=http://127.0.0.1:13378
+Environment=CLAM_WEB_PORT=13379
+Environment=CLAM_WEB_HOST=127.0.0.1,100.94.153.32
+Environment=TZ=Europe/Dublin
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
