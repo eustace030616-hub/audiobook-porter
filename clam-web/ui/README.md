@@ -19,3 +19,7 @@ the Book pair is the direct before/after for the logo and chapter states.
 
 The Shelf capture also shows the `Cache 2` button beside `Arrange`; `sleep-active`
 shows the active 15-minute countdown.
+
+Sleep fade and Media Session are behaviour-only captures: the fade is the last
+20 seconds of the sleep timer / chapter, and Media Session updates chapter
+metadata, position and previous/next actions from the same player state.

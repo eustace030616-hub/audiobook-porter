@@ -148,9 +148,17 @@ Sleep       15 / 30 / 45 minutes, end of chapter, or off
 ```
 
 The sleep timer pauses through the normal player, so it also saves progress.
-JavaScript timers are suspended while iOS is locked, so the sleep timer is
-reliable while the app is running in the foreground; it is not a substitute for
-a native sleep timer behind the lock screen.
+Its last 20 seconds fade the media element's volume to zero; `End of chapter`
+fades the final 20 seconds of the chapter instead. JavaScript timers are
+suspended while iOS is locked, so the timer is reliable while the app is running
+in the foreground; it is not a substitute for a native sleep timer behind the
+lock screen. The fade uses `HTMLMediaElement.volume`; iOS ignores programmatic
+element volume on some versions, in which case the pause still happens but the
+fade is inaudible.
+
+Media Session exposes previous/next chapter, seek, playback state, chapter
+metadata and position. The next/previous handlers call the same `jumpChapter`
+as the UI; the lock screen progress is chapter-relative.
 
 The download control is a four-state button:
 

@@ -16,6 +16,7 @@ import { cacheKey, getCachedBlob } from './lib/chapter-cache'
 export type SleepTimer = { kind: 'minutes'; endsAt: number; minutes: number } | { kind: 'chapter' } | null
 
 const SPEEDS = [0.8, 1, 1.25, 1.5] as const
+const SLEEP_FADE_SECONDS = 20
 
 function readSpeed(): number {
   try {
@@ -58,6 +59,19 @@ interface PlayerValue {
   jumpChapter: (direction: number) => void
 }
 
+function mediaMetadata(active: Book, index: number): MediaMetadata | null {
+  if (typeof MediaMetadata === 'undefined') return null
+  const chapter = chapterFor(active, index)
+  return new MediaMetadata({
+    title: chapter?.title || active.title,
+    artist: active.authors.join(', '),
+    album: active.title,
+    artwork: active.coverUrl
+      ? [{ src: new URL(active.coverUrl, window.location.href).href, sizes: '512x512' }]
+      : [],
+  })
+}
+
 const PlayerContext = createContext<PlayerValue | null>(null)
 
 interface PlayerProviderProps {
@@ -88,6 +102,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null)
   const [speed, setSpeedState] = useState(readSpeed)
   const speedRef = useRef(speed)
+  const fadeRef = useRef<number | null>(null)
 
   const clearBlobUrl = useCallback(() => {
     if (!blobUrlRef.current) return
@@ -150,14 +165,39 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     setPlaying(!audio.paused)
   }, [])
 
+  const cancelFade = useCallback((restoreVolume = true) => {
+    if (fadeRef.current !== null) {
+      window.clearInterval(fadeRef.current)
+      fadeRef.current = null
+    }
+    if (restoreVolume && audioRef.current) audioRef.current.volume = 1
+  }, [])
+
+  const startFade = useCallback((seconds: number, onDone?: () => void) => {
+    const audio = audioRef.current
+    if (!audio || fadeRef.current !== null) return
+    const started = Date.now()
+    const from = audio.volume
+    const duration = Math.max(1, seconds) * 1000
+    fadeRef.current = window.setInterval(() => {
+      const progress = Math.min(1, (Date.now() - started) / duration)
+      audio.volume = Math.max(0, from * (1 - progress))
+      if (progress < 1) return
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+      fadeRef.current = null
+      onDone?.()
+    }, 250)
+  }, [])
+
   const setSleep = useCallback((value: number | 'chapter' | null) => {
+    cancelFade()
     let next: SleepTimer = null
     if (value === 'chapter') next = { kind: 'chapter' }
     else if (value) next = { kind: 'minutes', endsAt: Date.now() + value * 60_000, minutes: value }
     sleepRef.current = next
     setSleepState(next)
     setSleepRemaining(next?.kind === 'minutes' ? Math.max(0, (next.endsAt - Date.now()) / 1000) : null)
-  }, [])
+  }, [cancelFade])
 
   const cycleSpeed = useCallback(() => {
     const index = Math.max(0, SPEEDS.indexOf(speedRef.current as (typeof SPEEDS)[number]))
@@ -173,16 +213,30 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     const tick = () => {
       const remaining = Math.max(0, (sleep.endsAt - Date.now()) / 1000)
       setSleepRemaining(remaining)
-      if (remaining > 0) return
-      audioRef.current?.pause()
-      sleepRef.current = null
-      setSleepState(null)
-      setSleepRemaining(null)
+      if (remaining > SLEEP_FADE_SECONDS) return
+      const audio = audioRef.current
+      if (!audio || fadeRef.current !== null) return
+      if (audio.paused) {
+        if (remaining <= 0) {
+          audio.volume = 1
+          sleepRef.current = null
+          setSleepState(null)
+          setSleepRemaining(null)
+        }
+        return
+      }
+      startFade(remaining, () => {
+        audio.pause()
+        audio.volume = 1
+        sleepRef.current = null
+        setSleepState(null)
+        setSleepRemaining(null)
+      })
     }
     tick()
     const interval = window.setInterval(tick, 500)
     return () => window.clearInterval(interval)
-  }, [sleep])
+  }, [sleep, startFade])
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed
@@ -345,6 +399,12 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       setChapterState(target)
       setDuration(chapterDuration(next, target))
       setCurrent(0)
+      try {
+        const metadata = mediaMetadata(next, target)
+        if (metadata && 'mediaSession' in navigator) navigator.mediaSession.metadata = metadata
+      } catch {
+        // metadata is best effort
+      }
       readyRef.current = true
       setReady(true)
       if (playNow) void play()
@@ -414,6 +474,41 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     const audio = audioRef.current
     if (!audio) return
 
+    const updateMetadata = (active: Book, index: number) => {
+      if (!('mediaSession' in navigator)) return
+      try {
+        const metadata = mediaMetadata(active, index)
+        if (metadata) navigator.mediaSession.metadata = metadata
+      } catch {
+        // metadata is best effort
+      }
+    }
+
+    const updatePositionState = () => {
+      if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return
+      const active = bookRef.current
+      if (!active) return
+      const chapter = chapterRef.current
+      const total =
+        modeRef.current === 'continuous'
+          ? chapterDuration(active, chapter)
+          : Number.isFinite(audio.duration)
+            ? audio.duration
+            : 0
+      if (!total) return
+      const position =
+        modeRef.current === 'continuous' ? audio.currentTime - chapterStart(active, chapter) : audio.currentTime
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: total,
+          playbackRate: audio.playbackRate,
+          position: Math.max(0, Math.min(total, position)),
+        })
+      } catch {
+        // Position state is optional.
+      }
+    }
+
     const onTime = () => {
       const active = bookRef.current
       if (active && modeRef.current === 'continuous') {
@@ -425,28 +520,29 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
           setChapterState(index)
           setDuration(chapterDuration(active, index))
           if (sleepRef.current?.kind === 'chapter') {
+            cancelFade(false)
             audio.pause()
+            audio.volume = 1
             sleepRef.current = null
             setSleepState(null)
             setSleepRemaining(null)
           }
-          if ('mediaSession' in navigator) {
-            const chapter = chapterFor(active, index)
-            try {
-              navigator.mediaSession.metadata = new MediaMetadata({
-                title: chapter?.title || active.title,
-                artist: active.authors.join(', '),
-                album: active.title,
-              })
-            } catch {
-              // metadata is best effort
-            }
-          }
+          updateMetadata(active, index)
         }
         setCurrent(Math.max(0, absolute - chapterStart(active, index)))
       } else {
         setCurrent(audio.currentTime)
       }
+
+      if (sleepRef.current?.kind === 'chapter' && fadeRef.current === null && !audio.paused) {
+        const remaining =
+          active && modeRef.current === 'continuous'
+            ? (chapterFor(active, chapterRef.current)?.end || 0) / 1000 - audio.currentTime
+            : (Number.isFinite(audio.duration) ? audio.duration : 0) - audio.currentTime
+        if (remaining > 0 && remaining <= SLEEP_FADE_SECONDS) startFade(remaining)
+      }
+
+      updatePositionState()
       if (Date.now() - lastTickSave.current > 2000) {
         lastTickSave.current = Date.now()
         savePosition()
@@ -462,6 +558,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
         if (Number.isFinite(audio.duration)) setDuration(audio.duration)
         setCurrent(audio.currentTime)
       }
+      updatePositionState()
     }
     const onPlay = () => {
       audio.playbackRate = speedRef.current
@@ -469,32 +566,34 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       if (!listenSince.current) listenSince.current = Date.now()
       const active = bookRef.current
       if (active && 'mediaSession' in navigator) {
-        const currentChapter = chapterFor(active, chapterRef.current)
+        updateMetadata(active, chapterRef.current)
         try {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: currentChapter?.title || active.title,
-            artist: active.authors.join(', '),
-            album: active.title,
-          })
+          navigator.mediaSession.playbackState = 'playing'
           navigator.mediaSession.setActionHandler('play', () => { void play() })
           navigator.mediaSession.setActionHandler('pause', () => audio.pause())
           navigator.mediaSession.setActionHandler('seekbackward', () => skip(-15))
           navigator.mediaSession.setActionHandler('seekforward', () => skip(15))
           navigator.mediaSession.setActionHandler('previoustrack', () => jumpChapter(-1))
           navigator.mediaSession.setActionHandler('nexttrack', () => jumpChapter(1))
+          navigator.mediaSession.setActionHandler('seekto', (details) => {
+            if (typeof details.seekTime === 'number') seekTo(details.seekTime)
+          })
         } catch {
           // Some browsers reject individual handlers.
         }
+        updatePositionState()
       }
     }
     const onPlaying = () => {
       if (!listenSince.current) listenSince.current = Date.now()
       setPlaying(true)
+      try { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing' } catch {}
     }
     const onPause = () => {
       flushListening()
       savePosition()
       setPlaying(false)
+      try { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused' } catch {}
     }
     const onEnded = () => {
       flushListening()
@@ -508,6 +607,8 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
         return
       }
       if (sleepRef.current?.kind === 'chapter') {
+        cancelFade(false)
+        audio.volume = 1
         savePosition(true)
         sleepRef.current = null
         setSleepState(null)
@@ -558,7 +659,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       document.removeEventListener('freeze', onHide)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [flushListening, jumpChapter, prepare, play, savePosition, skip])
+  }, [cancelFade, flushListening, jumpChapter, prepare, play, savePosition, seekTo, skip, startFade])
 
   const value = useMemo<PlayerValue>(() => ({
     book,
