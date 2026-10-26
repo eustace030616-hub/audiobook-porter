@@ -17,7 +17,7 @@ export function MiniPlayer({ path }: MiniPlayerProps) {
   return (
     <div className="fixed right-0 bottom-0 left-0 z-30 bg-player-bg pb-[env(safe-area-inset-bottom)] text-player-fg">
       <div className="h-0.5 bg-[#3a3a3a]">
-        <div className="h-full bg-paper" style={{ width: `${percent}%` }} />
+        <div className="h-full bg-accent" style={{ width: `${percent}%` }} />
       </div>
       {book ? (
         <div className="relative">

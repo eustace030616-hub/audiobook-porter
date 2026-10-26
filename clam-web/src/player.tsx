@@ -150,7 +150,8 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     setDuration(chapterData?.duration || next.duration || 0)
     try { localStorage.setItem('shelf:last', next.id) } catch { /* ignore */ }
 
-    audio.pause()
+    const wasEnded = audio.ended
+    if (!wasEnded) audio.pause()
     audio.dataset.book = next.id
     audio.dataset.chapter = String(target)
 
@@ -172,6 +173,11 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
 
     audio.src = audioUrl(next, target)
     audio.load()
+    // Start the next chapter immediately, while the ended/click gesture is still
+    // fresh. Waiting for metadata first loses the audio session on iOS.
+    const earlyPlay = options.autoplay
+      ? audio.play().catch(() => undefined)
+      : null
     await loaded
     if (bookRef.current?.id !== next.id || chapterRef.current !== target) return
 
@@ -186,7 +192,10 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     setDuration(actualDuration)
     setCurrent(Number.isFinite(audio.currentTime) ? audio.currentTime : 0)
     savePosition()
-    if (options.autoplay) await play()
+    if (options.autoplay) {
+      if (earlyPlay) await earlyPlay
+      if (audio.paused) await play()
+    }
   }, [play, savePosition])
 
   const setChapter = useCallback((next: Book, index: number, playNow = false) => {

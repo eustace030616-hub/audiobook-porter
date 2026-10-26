@@ -51,7 +51,10 @@ export function Book({ book }: BookProps) {
                     <button
                       type="button"
                       className="grid min-h-11 w-full grid-cols-[3rem_1fr_auto] items-center gap-4 bg-transparent py-2 text-left text-ink hover:bg-surface-2"
-                      onClick={() => navigate(`/play/${book.id}?chapter=${index + 1}&autoplay=1`)}
+                      onClick={() => {
+                        void player.prepare(book, { chapterIndex: index, restore: false, autoplay: true })
+                        navigate(`/play/${book.id}?chapter=${index + 1}&autoplay=1`)
+                      }}
                     >
                       <span className="text-micro text-muted">{String(index + 1).padStart(2, '0')}</span>
                       <span className="text-body">{chapter.title}</span>
