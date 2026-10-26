@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Theme } from '../types'
-import { THEMES } from '../lib/theme'
+import { THEMES, type ThemePreference } from '../lib/theme'
+import { Logo } from './Logo'
 
 interface TopBarProps {
   username: string
   theme: Theme
+  preference: ThemePreference
   onTheme: (theme: Theme) => void
+  onSystem: () => void
   onLogout: () => void
 }
 
-export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
+export function TopBar({ username, theme, preference, onTheme, onSystem, onLogout }: TopBarProps) {
   const [open, setOpen] = useState(false)
   const control = useRef<HTMLDivElement>(null)
 
@@ -37,9 +40,8 @@ export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
     <div className="sticky top-0 z-[8] bg-paper pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
       <div className="mx-auto max-w-[calc(72rem+32px)] px-4">
         <header className="flex items-baseline justify-between gap-4 border-b-2 border-rule pb-2">
-          <a className="wordmark" href="/">
-            <span className="wordmark-mark" aria-hidden="true" />
-            Clam
+          <a className="logo-link" href="/" aria-label="Clam home">
+            <Logo />
           </a>
           <div className="relative" ref={control}>
             <button
@@ -63,7 +65,19 @@ export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
                   Log out
                 </button>
                 <div className="mt-4">
-                  <p className="micro">Style</p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="micro">Style</p>
+                    <button
+                      type="button"
+                      className={`text-[10px] uppercase tracking-[0.12em] underline underline-offset-[3px] ${
+                        preference === 'system' ? 'text-ink' : 'text-muted'
+                      }`}
+                      aria-pressed={preference === 'system'}
+                      onClick={onSystem}
+                    >
+                      Auto
+                    </button>
+                  </div>
                   <button
                     type="button"
                     className="theme-cycle mt-1.5"

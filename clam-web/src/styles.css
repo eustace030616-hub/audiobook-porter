@@ -148,23 +148,57 @@
     text-transform: uppercase;
   }
 
-  .wordmark {
+  .logo-link {
+    display: inline-flex;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .logo {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     color: var(--ink);
-    font-size: var(--text-small);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-decoration: none;
-    text-transform: uppercase;
+    line-height: 1;
   }
 
-  .wordmark-mark {
+  .logo__mark {
     display: block;
-    width: 6px;
-    height: 6px;
-    background: currentColor;
+    width: 24px;
+    height: 24px;
+    flex: none;
+  }
+
+  .logo__text {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+  }
+
+  .logo--full {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .logo--full .logo__mark {
+    width: 72px;
+    height: 72px;
+  }
+
+  .logo--full .logo__text {
+    font-size: 46px;
+    letter-spacing: -0.055em;
+  }
+
+  .logo__sub {
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    line-height: 1;
+    text-transform: uppercase;
   }
 
   .cover {
@@ -548,3 +582,73 @@
     transform: translateX(300%);
   }
 }
+
+  .chapter-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .chapter-main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .chapter-main > span:nth-child(2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dialog-chapter-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .dialog-chapter-row .dialog-chapter {
+    flex: 1;
+    min-width: 0;
+    border-bottom: 0;
+  }
+
+  .dialog-chapter > span:nth-child(2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cache-button {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .cache-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cache-button.is-cached {
+    color: var(--ink);
+  }
+
+  .cache-button__progress {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .cache-dialog {
+    max-height: none;
+  }
+
+  .cache-dialog__body {
+    padding: 24px 16px calc(env(safe-area-inset-bottom) + 24px);
+  }

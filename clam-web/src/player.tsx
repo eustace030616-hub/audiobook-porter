@@ -11,6 +11,7 @@ import {
 import { api } from './api'
 import type { Book, SavedProgress, Stats } from './types'
 import { audioUrl, chapterAt, chapterDuration, chapterFor, chapterStart, isContinuous, savedProgress } from './lib/progress'
+import { cacheKey, getCachedBlob } from './lib/chapter-cache'
 
 interface PrepareOptions {
   restore?: boolean
@@ -51,6 +52,8 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   const bookRef = useRef<Book | null>(null)
   const chapterRef = useRef(0)
   const readyRef = useRef(false)
+  const modeRef = useRef<'continuous' | 'chapter'>('chapter')
+  const blobUrlRef = useRef<string | null>(null)
   const lastServerSave = useRef(0)
   const lastTickSave = useRef(0)
   const listenSince = useRef(0)
@@ -62,11 +65,19 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   const [ready, setReady] = useState(false)
   const [seeking, setSeekingState] = useState(false)
 
+  const clearBlobUrl = useCallback(() => {
+    if (!blobUrlRef.current) return
+    URL.revokeObjectURL(blobUrlRef.current)
+    blobUrlRef.current = null
+  }, [])
+
+  useEffect(() => clearBlobUrl, [clearBlobUrl])
+
   const savePosition = useCallback((beacon = false) => {
     const audio = audioRef.current
     const active = bookRef.current
     if (!audio || !active || !readyRef.current || audio.readyState < 1 || !Number.isFinite(audio.currentTime)) return
-    const position = isContinuous(active)
+    const position = modeRef.current === 'continuous'
       ? Math.max(0, audio.currentTime - chapterStart(active, chapterRef.current))
       : Math.max(0, audio.currentTime)
     const updated = Date.now()
@@ -128,13 +139,16 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     }
     target = Math.max(0, Math.min((next.chapters.length || 1) - 1, target))
     const chapterData = chapterFor(next, target)
-    const continuous = isContinuous(next)
+    const cachedBlob = !navigator.onLine ? await getCachedBlob(cacheKey(next.id, target)).catch(() => null) : null
+    const continuous = isContinuous(next) && !cachedBlob
+    const mode = continuous ? 'continuous' : 'chapter'
+    const sameMode = modeRef.current === mode
     const sameBook = bookRef.current?.id === next.id
     const start = continuous ? chapterStart(next, target) : 0
     let relative = options.position ?? null
     if (relative === null && options.restore && saved.chapter === target) relative = saved.position
 
-    if (continuous && sameBook) {
+    if (continuous && sameMode && sameBook) {
       // The single file is already loaded — a chapter change is a seek, not a
       // source swap. That is what lets iOS keep playing through a locked screen.
       const moved = chapterRef.current !== target
@@ -162,7 +176,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       return
     }
 
-    const sameChapter = sameBook && chapterRef.current === target && audio.dataset.chapter === String(target)
+    const sameChapter = sameMode && sameBook && chapterRef.current === target && audio.dataset.chapter === String(target)
     if (sameChapter) {
       if (audio.readyState >= 1) readyRef.current = true
       if (options.position !== null && options.position !== undefined) {
@@ -174,6 +188,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     }
 
     savePosition()
+    modeRef.current = mode
     bookRef.current = next
     setBook(next)
     chapterRef.current = target
@@ -205,13 +220,20 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       audio.addEventListener('error', finish, { once: true })
     })
 
-    audio.src = audioUrl(next, target)
-    if (continuous) {
-      // Set the pending seek before play so a chapter click does not briefly
-      // start at chapter one. iOS accepts a seek while metadata is loading.
-      try { audio.currentTime = start + (relative ?? 0) } catch { /* ignore */ }
-    } else {
+    clearBlobUrl()
+    if (cachedBlob) {
+      blobUrlRef.current = URL.createObjectURL(cachedBlob)
+      audio.src = blobUrlRef.current
       audio.load()
+    } else {
+      audio.src = audioUrl(next, target)
+      if (continuous) {
+        // Set the pending seek before play so a chapter click does not briefly
+        // start at chapter one. iOS accepts a seek while metadata is loading.
+        try { audio.currentTime = start + (relative ?? 0) } catch { /* ignore */ }
+      } else {
+        audio.load()
+      }
     }
     // Start immediately, while the ended/click gesture is still fresh. Waiting
     // for metadata first loses the audio session on iOS.
@@ -251,7 +273,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     if (!next.chapters.length) return
     const target = Math.max(0, Math.min(next.chapters.length - 1, index))
     const audio = audioRef.current
-    const continuous = isContinuous(next)
+    const continuous = modeRef.current === 'continuous' && isContinuous(next)
 
     if (continuous && bookRef.current?.id === next.id && audio && audio.readyState >= 1) {
       savePosition()
@@ -293,7 +315,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     if (!audio || !Number.isFinite(audio.duration)) return
     const next = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds))
     audio.currentTime = next
-    if (isContinuous(active)) syncContinuous(active!, next)
+    if (modeRef.current === 'continuous' && active) syncContinuous(active, next)
     else setCurrent(next)
   }, [syncContinuous])
 
@@ -312,7 +334,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     const audio = audioRef.current
     const active = bookRef.current
     if (!audio || !Number.isFinite(seconds)) return
-    if (isContinuous(active)) {
+    if (modeRef.current === 'continuous' && active) {
       const chapter = chapterRef.current
       const max = chapterDuration(active!, chapter)
       const value = Math.max(0, Math.min(max || seconds, seconds))
@@ -332,7 +354,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
 
     const onTime = () => {
       const active = bookRef.current
-      if (active && isContinuous(active)) {
+      if (active && modeRef.current === 'continuous') {
         const absolute = audio.currentTime
         const index = chapterAt(active, absolute)
         if (index !== chapterRef.current) {
@@ -364,7 +386,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     }
     const onMeta = () => {
       const active = bookRef.current
-      if (active && isContinuous(active)) {
+      if (active && modeRef.current === 'continuous') {
         setDuration(chapterDuration(active, chapterRef.current))
         setCurrent(Math.max(0, audio.currentTime - chapterStart(active, chapterRef.current)))
       } else {
@@ -408,7 +430,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       flushListening()
       listenSince.current = 0
       const active = bookRef.current
-      if (active && isContinuous(active)) {
+      if (active && modeRef.current === 'continuous') {
         // The continuous file has reached the end of the book; chapter changes
         // are handled by timeupdate without a source swap.
         savePosition(true)

@@ -4,6 +4,7 @@ import { chapterFor, clock, savedProgress } from '../lib/progress'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
+import { CacheButton } from '../components/CacheButton'
 import { BackIcon, PauseIcon, PlayIcon, SeekIcon } from '../components/Icons'
 import { TransportButton } from '../components/TransportButton'
 
@@ -25,7 +26,7 @@ export function Play({ book, search }: PlayProps) {
 
   useEffect(() => {
     const saved = savedProgress(book)
-    const target = autoplay && Number.isInteger(chapterParam) && chapterParam > 0
+    const target = Number.isInteger(chapterParam) && chapterParam > 0
       ? chapterParam - 1
       : player.book?.id === book.id
         ? player.chapter
@@ -184,20 +185,22 @@ export function Play({ book, search }: PlayProps) {
         </header>
         <div className="dialog-list" ref={dialogList}>
           {book.chapters.map((item, index) => (
-            <button
-              key={index}
-              type="button"
-              className="dialog-chapter"
-              aria-current={index === chapterIndex ? 'true' : undefined}
-              onClick={() => {
-                player.setChapter(book, index, true)
-                setChaptersOpen(false)
-              }}
-            >
-              <span className="micro text-[10px]">{String(index + 1).padStart(2, '0')}</span>
-              <span>{item.title}</span>
-              <span className="micro text-[10px]">{clock(item.start / 1000)}</span>
-            </button>
+            <div key={index} className="dialog-chapter-row">
+              <button
+                type="button"
+                className="dialog-chapter"
+                aria-current={index === chapterIndex ? 'true' : undefined}
+                onClick={() => {
+                  player.setChapter(book, index, true)
+                  setChaptersOpen(false)
+                }}
+              >
+                <span className="micro text-[10px]">{String(index + 1).padStart(2, '0')}</span>
+                <span>{item.title}</span>
+                <span className="micro text-[10px]">{clock(item.start / 1000)}</span>
+              </button>
+              <CacheButton book={book} index={index} />
+            </div>
           ))}
         </div>
       </Sheet>

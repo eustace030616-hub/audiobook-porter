@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api'
+import { Logo } from '../components/Logo'
 
 interface LoginProps {
   onSignedIn: (username: string) => void
@@ -30,10 +31,7 @@ export function Login({ onSignedIn }: LoginProps) {
     <div className="mx-auto min-h-dvh max-w-[calc(34rem+32px)] px-4">
       <div className="pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
         <header className="flex items-baseline justify-between gap-4 border-b-2 border-rule pb-2">
-          <span className="wordmark">
-            <span className="wordmark-mark" aria-hidden="true" />
-            Clam
-          </span>
+          <Logo />
         </header>
       </div>
       <main className="py-16 max-[680px]:py-8">

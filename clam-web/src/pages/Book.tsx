@@ -4,6 +4,7 @@ import { clock } from '../lib/progress'
 import { navigate } from '../lib/router'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
+import { CacheButton } from '../components/CacheButton'
 
 interface BookProps {
   book: BookType
@@ -47,10 +48,10 @@ export function Book({ book }: BookProps) {
             {book.chapters.length ? (
               <ol className="border-t border-hair">
                 {book.chapters.map((chapter, index) => (
-                  <li key={index} className="border-b border-hair">
+                  <li key={index} className="chapter-row border-b border-hair">
                     <button
                       type="button"
-                      className="grid min-h-11 w-full grid-cols-[3rem_1fr_auto] items-center gap-4 bg-transparent py-2 text-left text-ink hover:bg-surface-2"
+                      className="chapter-main grid min-h-11 w-full grid-cols-[3rem_1fr_auto] items-center gap-4 bg-transparent py-2 text-left text-ink hover:bg-surface-2"
                       onClick={() => {
                         void player.prepare(book, { chapterIndex: index, restore: false, autoplay: true })
                         navigate(`/play/${book.id}?chapter=${index + 1}&autoplay=1`)
@@ -60,6 +61,7 @@ export function Book({ book }: BookProps) {
                       <span className="text-body">{chapter.title}</span>
                       <span className="text-micro text-muted tabular-nums">{clock(chapter.start / 1000)}</span>
                     </button>
+                    <CacheButton book={book} index={index} />
                   </li>
                 ))}
               </ol>

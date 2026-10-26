@@ -1,11 +1,10 @@
+import { Logo } from './Logo'
+
 export function Splash() {
   return (
     <div className="splash" role="status" aria-live="polite">
       <div className="splash-top">
-        <span className="wordmark">
-          <span className="wordmark-mark" aria-hidden="true" />
-          Clam
-        </span>
+        <Logo />
         <span className="micro">Local edition</span>
       </div>
       <div className="splash-center">

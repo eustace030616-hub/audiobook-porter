@@ -250,3 +250,17 @@ porter download → porter convert → porter port
 
 All three jobs should run on berry so the Mac never has to hold the 1.8 GB source.
 This stage is only the UI and the first manually ported book.
+
+
+## New client: PWA and cached chapters
+
+The React client at `:13379` carries a PWA manifest, service worker, system-theme
+auto mode and a three-slot chapter cache. Full offline support and Home Screen
+install need HTTPS; on the Pi:
+
+```bash
+sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
+```
+
+Open `https://berry.taild3bc35.ts.net/`. See `clam-web/README.md` for the cache
+semantics and the old `:13378` boundary.

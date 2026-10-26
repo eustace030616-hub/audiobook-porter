@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { api, ApiError } from './api'
 import type { Library, Stats, Theme } from './types'
-import { applyTheme, readTheme } from './lib/theme'
+import { applyTheme, readThemePreference, resolveTheme, saveThemePreference, type ThemePreference } from './lib/theme'
 import { navigate, parseRoute, useLinkHandler, useLocation } from './lib/router'
 import { todayKey } from './lib/progress'
 import { PlayerProvider, usePlayer } from './player'
+import { ChapterCacheProvider } from './chapter-cache'
 import { Splash } from './components/Splash'
 import { TopBar } from './components/TopBar'
 import { MiniPlayer } from './components/MiniPlayer'
@@ -23,9 +24,11 @@ interface SignedInProps {
   stats: Stats
   username: string
   theme: Theme
+  preference: ThemePreference
   setLibrary: Dispatch<SetStateAction<Library | null>>
   reload: () => Promise<void>
   onTheme: (theme: Theme) => void
+  onSystem: () => void
   onLogout: () => void
 }
 
@@ -35,9 +38,11 @@ function SignedInApp({
   stats,
   username,
   theme,
+  preference,
   setLibrary,
   reload,
   onTheme,
+  onSystem,
   onLogout,
 }: SignedInProps) {
   const route = parseRoute(path)
@@ -70,7 +75,7 @@ function SignedInApp({
   return (
     <div className={isPlay ? '' : 'pb-[calc(72px+env(safe-area-inset-bottom))]'}>
       {isPlay ? null : (
-        <TopBar username={username} theme={theme} onTheme={onTheme} onLogout={onLogout} />
+        <TopBar username={username} theme={theme} preference={preference} onTheme={onTheme} onSystem={onSystem} onLogout={onLogout} />
       )}
       {body}
       {isPlay ? null : <MiniPlayer path={path} />}
@@ -81,7 +86,8 @@ function SignedInApp({
 export default function App() {
   useLinkHandler()
   const path = useLocation()
-  const [theme, setTheme] = useState<Theme>(() => readTheme())
+  const [preference, setPreference] = useState<ThemePreference>(() => readThemePreference())
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readThemePreference()))
   const [auth, setAuth] = useState<AuthState>('checking')
   const [username, setUsername] = useState('User')
   const [library, setLibrary] = useState<Library | null>(null)
@@ -90,8 +96,19 @@ export default function App() {
   const bootAt = useRef(Date.now())
 
   useEffect(() => {
-    applyTheme(theme, false)
+    applyTheme(theme)
   }, [theme])
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+    if (!media) return
+    const sync = () => {
+      if (preference === 'system') setTheme(resolveTheme('system'))
+    }
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [preference])
 
   useEffect(() => {
     let alive = true
@@ -172,8 +189,15 @@ export default function App() {
   }, [])
 
   const chooseTheme = useCallback((next: Theme) => {
+    setPreference(next)
+    saveThemePreference(next)
     setTheme(next)
-    applyTheme(next, true)
+  }, [])
+
+  const chooseSystem = useCallback(() => {
+    setPreference('system')
+    saveThemePreference('system')
+    setTheme(resolveTheme('system'))
   }, [])
 
   const addListening = useCallback((seconds: number) => {
@@ -210,18 +234,22 @@ export default function App() {
   if (!library || !stats) return <Splash />
 
   return (
-    <PlayerProvider onListening={addListening} onStats={setStats}>
-      <SignedInApp
-        path={path}
-        library={library}
-        stats={stats}
-        username={username}
-        theme={theme}
-        setLibrary={setLibrary}
-        reload={reload}
-        onTheme={chooseTheme}
-        onLogout={onLogout}
-      />
-    </PlayerProvider>
+    <ChapterCacheProvider>
+      <PlayerProvider onListening={addListening} onStats={setStats}>
+        <SignedInApp
+          path={path}
+          library={library}
+          stats={stats}
+          username={username}
+          theme={theme}
+          preference={preference}
+          setLibrary={setLibrary}
+          reload={reload}
+          onTheme={chooseTheme}
+          onSystem={chooseSystem}
+          onLogout={onLogout}
+        />
+      </PlayerProvider>
+    </ChapterCacheProvider>
   )
 }

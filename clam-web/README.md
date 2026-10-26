@@ -87,3 +87,47 @@ python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bi
 The script writes `book.m4b` and `continuous_file` into `metadata.json`. The old client continues to
 use the split files; the API exposes `continuousUrl` only as an extra field, so the old client is
 unaffected until it is retired.
+
+## PWA, system theme and chapter cache
+
+The new client is a PWA:
+
+```
+manifest.webmanifest   standalone, Clam icon, 192/512 + Apple touch icon
+sw.js                  app shell, /api/books and /__auth/me network-first
+                       cover images and hashed assets cache-first
+theme                  default follows prefers-color-scheme; Auto returns to it
+chapter cache          IndexedDB, split chapter files, 3 slots, oldest evicted
+```
+
+The service worker only registers in a secure context. `http://berry:13379` is
+plain HTTP, so the worker is skipped there. To use the installed PWA and the
+offline shell, serve the same app through Tailscale HTTPS:
+
+```bash
+sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
+# then open https://berry.taild3bc35.ts.net/
+```
+
+The HTTPS origin has its own cookies and localStorage, so sign in and choose the
+theme once there. The old `:13378` client and the HTTP preview keep working.
+
+### Chapter cache
+
+Each chapter row (Book page and chapter sheet) has a download control. The
+first three chapters are stored as split chapter files in IndexedDB; a fourth
+download opens a prompt naming the oldest cached chapter before replacing it.
+Cached chapters are used only when the browser is offline; online playback still
+uses the continuous `book.m4b` so lock-screen chapter advance stays native.
+
+```
+key          bookId:chapterIndex
+limit        3 chapters, global across the library
+source       /audio/:bookId/:chapterIndex (split file)
+offline      blob URL via media-src blob:
+online       ignored; continuous file remains the playback source
+```
+
+The service worker caches `/__auth/me` and `/api/books`, so an app that has been
+opened online can boot offline. Progress writes are local while offline; the next
+online save catches the server up. Listening-time deltas are not queued.
