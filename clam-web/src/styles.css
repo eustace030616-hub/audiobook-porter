@@ -452,6 +452,10 @@
     font-weight: 700;
   }
 
+  .dialog-chapter[aria-current="true"] .dialog-chapter__title {
+    color: var(--accent);
+  }
+
   .theme-cycle {
     display: flex;
     gap: 2px;
@@ -600,6 +604,10 @@
     white-space: nowrap;
   }
 
+  .chapter-main[aria-current="true"] .chapter-title {
+    color: var(--accent);
+  }
+
   .dialog-chapter-row {
     display: flex;
     align-items: center;
@@ -640,8 +648,20 @@
     color: var(--ink);
   }
 
+  .cache-button.is-downloading {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .cache-button.is-downloading svg {
+    width: 13px;
+    height: 13px;
+  }
+
   .cache-button__progress {
-    font-size: 9px;
+    font-size: 8px;
+    line-height: 1;
     letter-spacing: 0.02em;
   }
 

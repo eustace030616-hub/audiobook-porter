@@ -102,33 +102,70 @@ export interface DownloadResult {
   type: string
 }
 
-export async function downloadChapter(
+export interface ChapterDownload {
+  promise: Promise<DownloadResult>
+  pause: () => void
+  resume: () => void
+  cancel: () => void
+}
+
+export function startChapterDownload(
   book: Book,
   index: number,
   onProgress?: (fraction: number) => void,
-): Promise<DownloadResult> {
-  const response = await fetch(chapterFileUrl(book, index), { credentials: 'same-origin' })
-  if (!response.ok) throw new Error(`Chapter download failed (${response.status})`)
-  const type = response.headers.get('content-type') || 'audio/mp4'
-  const total = Number(response.headers.get('content-length')) || 0
+): ChapterDownload {
+  let paused = false
+  let resumeWait: (() => void) | null = null
+  const controller = new AbortController()
 
-  if (!response.body) {
-    const blob = await response.blob()
+  const gate = async () => {
+    if (!paused) return
+    await new Promise<void>((resolve) => {
+      resumeWait = resolve
+    })
+  }
+
+  const promise = (async (): Promise<DownloadResult> => {
+    const response = await fetch(chapterFileUrl(book, index), {
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new Error(`Chapter download failed (${response.status})`)
+    const type = response.headers.get('content-type') || 'audio/mp4'
+    const total = Number(response.headers.get('content-length')) || 0
+
+    if (!response.body) {
+      const blob = await response.blob()
+      onProgress?.(1)
+      return { blob, size: blob.size, type }
+    }
+
+    const reader = response.body.getReader()
+    const chunks: BlobPart[] = []
+    let received = 0
+    for (;;) {
+      await gate()
+      const { done: finished, value } = await reader.read()
+      if (finished) break
+      if (!value) continue
+      chunks.push(value as BlobPart)
+      received += value.byteLength
+      if (total) onProgress?.(Math.min(1, received / total))
+    }
     onProgress?.(1)
-    return { blob, size: blob.size, type }
-  }
+    return { blob: new Blob(chunks, { type }), size: received, type }
+  })()
 
-  const reader = response.body.getReader()
-  const chunks: BlobPart[] = []
-  let received = 0
-  for (;;) {
-    const { done: finished, value } = await reader.read()
-    if (finished) break
-    if (!value) continue
-    chunks.push(value as BlobPart)
-    received += value.byteLength
-    if (total) onProgress?.(Math.min(1, received / total))
+  return {
+    promise,
+    pause: () => {
+      paused = true
+    },
+    resume: () => {
+      paused = false
+      resumeWait?.()
+      resumeWait = null
+    },
+    cancel: () => controller.abort(),
   }
-  onProgress?.(1)
-  return { blob: new Blob(chunks, { type }), size: received, type }
 }

@@ -12,6 +12,7 @@ import { MiniPlayer } from './components/MiniPlayer'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Shelf } from './pages/Shelf'
+import { Cache } from './pages/Cache'
 import { Book } from './pages/Book'
 import { Play } from './pages/Play'
 import { NotFound } from './pages/NotFound'
@@ -61,6 +62,7 @@ function SignedInApp({
   const body = (() => {
     if (route.kind === 'home') return <Home library={library} stats={stats} />
     if (route.kind === 'shelf') return <Shelf library={library} onLibrary={setLibrary} reload={reload} />
+    if (route.kind === 'cache') return <Cache library={library} />
     if (route.kind === 'book') {
       const book = library.books.find((entry) => entry.id === route.id)
       return book ? <Book book={book} /> : <NotFound />

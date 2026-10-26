@@ -17,6 +17,7 @@ export function Play({ book, search }: PlayProps) {
   const player = usePlayer()
   const [showDescription, setShowDescription] = useState(false)
   const [chaptersOpen, setChaptersOpen] = useState(false)
+  const [sleepOpen, setSleepOpen] = useState(false)
   const [drag, setDrag] = useState<number | null>(null)
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
@@ -50,6 +51,13 @@ export function Play({ book, search }: PlayProps) {
   const shown = drag ?? current
   const percent = duration ? Math.min(100, (shown / duration) * 100) : 0
   const chapterLine = book.chapters.length ? `Chapter ${chapterIndex + 1} of ${book.chapters.length}` : book.title
+  const speedLabel = player.speed === 1 ? '1×' : `${player.speed}×`
+  const sleepSeconds = Math.max(0, Math.ceil(player.sleepRemaining || 0))
+  const sleepLabel = !player.sleep
+    ? 'Sleep'
+    : player.sleep.kind === 'chapter'
+      ? 'End chapter'
+      : `${Math.floor(sleepSeconds / 60)}:${String(sleepSeconds % 60).padStart(2, '0')}`
 
   function setSeeking(value: boolean) {
     player.setSeeking(value)
@@ -65,8 +73,23 @@ export function Play({ book, search }: PlayProps) {
         <a className="grid h-11 w-11 place-items-center no-underline" href={`/book/${book.id}`} aria-label="Back to book">
           <BackIcon className="h-[22px] w-[22px]" />
         </a>
-        <p className="micro text-center">Now playing</p>
-        <span aria-hidden="true" />
+        <button
+          type="button"
+          className={`min-h-11 p-0 text-center text-micro uppercase tracking-[0.12em] ${player.sleep ? 'font-medium text-ink' : 'text-muted'}`}
+          aria-label="Sleep timer"
+          onClick={() => setSleepOpen(true)}
+        >
+          {sleepLabel}
+        </button>
+        <button
+          type="button"
+          className="min-h-11 p-0 text-right text-micro uppercase tracking-[0.08em] text-muted"
+          aria-label={`Playback speed ${speedLabel}`}
+          title="Playback speed"
+          onClick={player.cycleSpeed}
+        >
+          {speedLabel}
+        </button>
       </header>
 
       <div className="flex flex-1 flex-col justify-center pt-6">
@@ -87,7 +110,7 @@ export function Play({ book, search }: PlayProps) {
               <Cover book={book} />
             </div>
             <div className="mt-6 text-center">
-              <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">
+              <h1 className={`mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em] ${chapter ? 'text-accent' : ''}`}>
                 {chapter?.title || book.title}
               </h1>
             </div>
@@ -196,12 +219,57 @@ export function Play({ book, search }: PlayProps) {
                 }}
               >
                 <span className="micro text-[10px]">{String(index + 1).padStart(2, '0')}</span>
-                <span>{item.title}</span>
+                <span className="dialog-chapter__title">{item.title}</span>
                 <span className="micro text-[10px]">{clock(item.start / 1000)}</span>
               </button>
               <CacheButton book={book} index={index} />
             </div>
           ))}
+        </div>
+      </Sheet>
+
+      <Sheet open={sleepOpen} onClose={() => setSleepOpen(false)}>
+        <header className="dialog-head">
+          <h2>Sleep timer</h2>
+          <button
+            type="button"
+            className="min-h-11 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+            onClick={() => setSleepOpen(false)}
+          >
+            Close
+          </button>
+        </header>
+        <div className="px-4 pb-4">
+          {([
+            { label: 'Off', value: null },
+            { label: '15 minutes', value: 15 },
+            { label: '30 minutes', value: 30 },
+            { label: '45 minutes', value: 45 },
+            { label: 'End of chapter', value: 'chapter' },
+          ] as const).map((option) => {
+            const active =
+              option.value === null
+                ? !player.sleep
+                : option.value === 'chapter'
+                  ? player.sleep?.kind === 'chapter'
+                  : player.sleep?.kind === 'minutes' && player.sleep.minutes === option.value
+            return (
+              <button
+                key={option.label}
+                type="button"
+                className={`flex min-h-11 w-full items-center justify-between border-b border-hair py-3 text-left text-body ${
+                  active ? 'font-medium text-accent' : 'text-ink'
+                }`}
+                onClick={() => {
+                  player.setSleep(option.value)
+                  setSleepOpen(false)
+                }}
+              >
+                <span>{option.label}</span>
+                {active ? <span aria-hidden="true">✓</span> : null}
+              </button>
+            )
+          })}
         </div>
       </Sheet>
     </main>

@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import type { Book, Library, Shelf as ShelfType } from '../types'
 import { api } from '../api'
+import { navigate } from '../lib/router'
+import { useChapterCache } from '../chapter-cache'
 import { bookPercent } from '../lib/progress'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -25,6 +27,7 @@ function shelfLayout(shelves: ShelfType[]): { shelves: string[]; books: Record<s
 }
 
 export function Shelf({ library, onLibrary, reload }: ShelfProps) {
+  const cache = useChapterCache()
   const [shelves, setShelves] = useState(library.shelves)
   const [arranging, setArranging] = useState(false)
   const [bookEditor, setBookEditor] = useState<Book | null>(null)
@@ -265,6 +268,13 @@ export function Shelf({ library, onLibrary, reload }: ShelfProps) {
                 New shelf
               </button>
             ) : null}
+            <button
+              type="button"
+              className="min-h-11 py-2 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+              onClick={() => navigate('/cache')}
+            >
+              Cache{cache.entries.length ? ` ${cache.entries.length}` : ''}
+            </button>
             <button
               type="button"
               className="min-h-11 py-2 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"

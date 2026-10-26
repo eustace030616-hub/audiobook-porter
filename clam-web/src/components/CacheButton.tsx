@@ -3,26 +3,48 @@ import { cacheKey } from '../lib/chapter-cache'
 import { useChapterCache } from '../chapter-cache'
 
 export function CacheButton({ book, index }: { book: Book; index: number }) {
-  const { cached, downloading, request } = useChapterCache()
+  const { cached, downloading, request, pause, resume, remove } = useChapterCache()
   const key = cacheKey(book.id, index)
   const entry = cached(book.id, index)
-  const progress = downloading[key]
+  const task = downloading[key]
 
-  if (progress !== undefined) {
+  if (task) {
+    const percent = Math.round(task.progress * 100)
     return (
-      <span className="cache-button" aria-label="Caching chapter" role="status">
-        <span className="cache-button__progress tabular-nums">{Math.round(progress * 100)}</span>
-      </span>
+      <button
+        type="button"
+        className={`cache-button is-downloading${task.paused ? ' is-paused' : ''}`}
+        aria-label={task.paused ? `Resume caching chapter, ${percent}%` : `Pause caching chapter, ${percent}%`}
+        title={task.paused ? 'Resume download' : 'Pause download'}
+        onClick={() => (task.paused ? resume(book.id, index) : pause(book.id, index))}
+      >
+        {task.paused ? (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z" fill="currentColor" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" />
+          </svg>
+        )}
+        <span className="cache-button__progress tabular-nums">{percent}</span>
+      </button>
     )
   }
 
   if (entry) {
     return (
-      <span className="cache-button is-cached" role="img" aria-label="Cached chapter" title="Cached">
+      <button
+        type="button"
+        className="cache-button is-cached"
+        aria-label={`Delete cached chapter ${entry.title}`}
+        title="Cached — tap to delete"
+        onClick={() => void remove(book.id, index)}
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" strokeWidth="1.7" />
         </svg>
-      </span>
+      </button>
     )
   }
 

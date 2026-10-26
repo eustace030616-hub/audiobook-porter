@@ -45,6 +45,7 @@ export function useLinkHandler(): void {
 export type Route =
   | { kind: 'home' }
   | { kind: 'shelf' }
+  | { kind: 'cache' }
   | { kind: 'book'; id: string }
   | { kind: 'play'; id: string; search: URLSearchParams }
   | { kind: 'login' }
@@ -54,6 +55,7 @@ export function parseRoute(path: string): Route {
   const url = new URL(path, window.location.origin)
   if (url.pathname === '/' || url.pathname === '') return { kind: 'home' }
   if (url.pathname === '/shelf') return { kind: 'shelf' }
+  if (url.pathname === '/cache') return { kind: 'cache' }
   if (url.pathname === '/login') return { kind: 'login' }
   const book = url.pathname.match(/^\/book\/([a-f0-9]{12})\/?$/)
   if (book) return { kind: 'book', id: book[1] }

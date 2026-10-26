@@ -13,6 +13,20 @@ import type { Book, SavedProgress, Stats } from './types'
 import { audioUrl, chapterAt, chapterDuration, chapterFor, chapterStart, isContinuous, savedProgress } from './lib/progress'
 import { cacheKey, getCachedBlob } from './lib/chapter-cache'
 
+export type SleepTimer = { kind: 'minutes'; endsAt: number; minutes: number } | { kind: 'chapter' } | null
+
+const SPEEDS = [0.8, 1, 1.25, 1.5] as const
+
+function readSpeed(): number {
+  try {
+    const value = Number(localStorage.getItem('clam:speed'))
+    if (SPEEDS.includes(value as (typeof SPEEDS)[number])) return value
+  } catch {
+    // fall through
+  }
+  return 1
+}
+
 interface PrepareOptions {
   restore?: boolean
   chapterIndex?: number | null
@@ -28,6 +42,11 @@ interface PlayerValue {
   playing: boolean
   ready: boolean
   seeking: boolean
+  sleep: SleepTimer
+  sleepRemaining: number | null
+  setSleep: (value: number | 'chapter' | null) => void
+  speed: number
+  cycleSpeed: () => void
   prepare: (book: Book, options?: PrepareOptions) => Promise<void>
   play: () => Promise<void>
   pause: () => void
@@ -64,6 +83,11 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   const [playing, setPlaying] = useState(false)
   const [ready, setReady] = useState(false)
   const [seeking, setSeekingState] = useState(false)
+  const [sleep, setSleepState] = useState<SleepTimer>(null)
+  const sleepRef = useRef<SleepTimer>(null)
+  const [sleepRemaining, setSleepRemaining] = useState<number | null>(null)
+  const [speed, setSpeedState] = useState(readSpeed)
+  const speedRef = useRef(speed)
 
   const clearBlobUrl = useCallback(() => {
     if (!blobUrlRef.current) return
@@ -125,6 +149,44 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     }
     setPlaying(!audio.paused)
   }, [])
+
+  const setSleep = useCallback((value: number | 'chapter' | null) => {
+    let next: SleepTimer = null
+    if (value === 'chapter') next = { kind: 'chapter' }
+    else if (value) next = { kind: 'minutes', endsAt: Date.now() + value * 60_000, minutes: value }
+    sleepRef.current = next
+    setSleepState(next)
+    setSleepRemaining(next?.kind === 'minutes' ? Math.max(0, (next.endsAt - Date.now()) / 1000) : null)
+  }, [])
+
+  const cycleSpeed = useCallback(() => {
+    const index = Math.max(0, SPEEDS.indexOf(speedRef.current as (typeof SPEEDS)[number]))
+    const next = SPEEDS[(index + 1) % SPEEDS.length]
+    speedRef.current = next
+    setSpeedState(next)
+    if (audioRef.current) audioRef.current.playbackRate = next
+    try { localStorage.setItem('clam:speed', String(next)) } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    if (!sleep || sleep.kind !== 'minutes') return
+    const tick = () => {
+      const remaining = Math.max(0, (sleep.endsAt - Date.now()) / 1000)
+      setSleepRemaining(remaining)
+      if (remaining > 0) return
+      audioRef.current?.pause()
+      sleepRef.current = null
+      setSleepState(null)
+      setSleepRemaining(null)
+    }
+    tick()
+    const interval = window.setInterval(tick, 500)
+    return () => window.clearInterval(interval)
+  }, [sleep])
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed
+  }, [speed])
 
   const prepare = useCallback(async (next: Book, options: PrepareOptions = {}) => {
     const audio = audioRef.current
@@ -362,6 +424,12 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
           chapterRef.current = index
           setChapterState(index)
           setDuration(chapterDuration(active, index))
+          if (sleepRef.current?.kind === 'chapter') {
+            audio.pause()
+            sleepRef.current = null
+            setSleepState(null)
+            setSleepRemaining(null)
+          }
           if ('mediaSession' in navigator) {
             const chapter = chapterFor(active, index)
             try {
@@ -385,6 +453,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       }
     }
     const onMeta = () => {
+      audio.playbackRate = speedRef.current
       const active = bookRef.current
       if (active && modeRef.current === 'continuous') {
         setDuration(chapterDuration(active, chapterRef.current))
@@ -395,6 +464,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       }
     }
     const onPlay = () => {
+      audio.playbackRate = speedRef.current
       setPlaying(true)
       if (!listenSince.current) listenSince.current = Date.now()
       const active = bookRef.current
@@ -434,6 +504,14 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
         // The continuous file has reached the end of the book; chapter changes
         // are handled by timeupdate without a source swap.
         savePosition(true)
+        setPlaying(false)
+        return
+      }
+      if (sleepRef.current?.kind === 'chapter') {
+        savePosition(true)
+        sleepRef.current = null
+        setSleepState(null)
+        setSleepRemaining(null)
         setPlaying(false)
         return
       }
@@ -490,6 +568,11 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     playing,
     ready,
     seeking,
+    sleep,
+    sleepRemaining,
+    setSleep,
+    speed,
+    cycleSpeed,
     prepare,
     play,
     pause,
@@ -499,7 +582,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     skip,
     setChapter,
     jumpChapter,
-  }), [book, chapter, current, duration, playing, ready, seeking, prepare, play, pause, toggle, seekTo, setSeeking, skip, setChapter, jumpChapter])
+  }), [book, chapter, current, duration, playing, ready, seeking, sleep, sleepRemaining, setSleep, speed, cycleSpeed, prepare, play, pause, toggle, seekTo, setSeeking, skip, setChapter, jumpChapter])
 
   return (
     <PlayerContext.Provider value={value}>

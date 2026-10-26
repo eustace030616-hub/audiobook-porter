@@ -132,3 +132,36 @@ online       ignored; continuous file remains the playback source
 The service worker caches `/__auth/me` and `/api/books`, so an app that has been
 opened online can boot offline. Progress writes are local while offline; the next
 online save catches the server up. Listening-time deltas are not queued.
+
+
+## Player and cache controls
+
+The current chapter title is accent red in the chapter list, the chapter sheet
+and the player title. A red current chapter is the only chapter-list colour; the
+number and time stay muted.
+
+The Play header replaces the old `Now playing` label with:
+
+```
+Sleep       15 / 30 / 45 minutes, end of chapter, or off
+1×          cycles 0.8× · 1× · 1.25× · 1.5×, persisted in clam:speed
+```
+
+The sleep timer pauses through the normal player, so it also saves progress.
+JavaScript timers are suspended while iOS is locked, so the sleep timer is
+reliable while the app is running in the foreground; it is not a substitute for
+a native sleep timer behind the lock screen.
+
+The download control is a four-state button:
+
+```
+↓     cache
+pause / %   downloading; tap to pause
+play / %    paused; tap to resume
+✓     cached; tap to delete immediately
+```
+
+A paused download keeps its reader and chunks in memory and resumes from the
+same offset. The cache page at `/cache` groups downloaded chapters by book,
+shows their sizes and removes individual entries. The Shelf `Cache` button opens
+it beside `Arrange`.
