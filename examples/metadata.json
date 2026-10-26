@@ -1,0 +1,229 @@
+{
+  "asin": "",
+  "title": "Harry Potter und der Orden des Phönix",
+  "subtitle": "",
+  "authors": [
+    "J.K. Rowling"
+  ],
+  "narrators": [],
+  "series": [
+    {
+      "title": "Harry Potter",
+      "sequence": "5"
+    }
+  ],
+  "series_title": "Harry Potter",
+  "series_sequence": "5",
+  "publisher": "Der Hörverlag",
+  "language": "de",
+  "runtime_minutes": 2078,
+  "release_date": "2015",
+  "description": "Es sind Sommerferien und wieder einmal sitzt Harry bei den unmöglichen Dursleys im Ligusterweg fest. Doch diesmal treibt ihn größere Unruhe denn je - Warum schreiben seine Freunde Ron und Hermine nur so rätselhafte Briefe? Und vor allem: Warum erfährt er nichts über die dunklen Mächte, die inzwischen neu erstanden sind und sich unaufhaltsam über Harrys Welt verbreiten? Noch ahnt er nicht, was der geheimnisvolle Orden des Phönix gegen Voldemort ausrichten kann...",
+  "genres": [
+    "Hörbuch"
+  ],
+  "chapters": [
+    {
+      "title": "Vorspann",
+      "start": 0,
+      "end": 41180
+    },
+    {
+      "title": "Dudley umnachtet",
+      "start": 41180,
+      "end": 2676611
+    },
+    {
+      "title": "Eulen über Eulen",
+      "start": 2676611,
+      "end": 5603324
+    },
+    {
+      "title": "Die Vorhut",
+      "start": 5603324,
+      "end": 8091226
+    },
+    {
+      "title": "Grimmauldplatz Nummer zwölf",
+      "start": 8091226,
+      "end": 10709555
+    },
+    {
+      "title": "Der Orden des Phönix",
+      "start": 10709555,
+      "end": 13212155
+    },
+    {
+      "title": "Das fürnehme und gar alte Haus der Blacks",
+      "start": 13212155,
+      "end": 16384581
+    },
+    {
+      "title": "Das Zaubereiministerium",
+      "start": 16384581,
+      "end": 18500198
+    },
+    {
+      "title": "Die Anhörung",
+      "start": 18500198,
+      "end": 20554166
+    },
+    {
+      "title": "Mrs Weasleys Wehklage",
+      "start": 20554166,
+      "end": 24391496
+    },
+    {
+      "title": "Luna Lovegood",
+      "start": 24391496,
+      "end": 27080251
+    },
+    {
+      "title": "Das neue Lied des Sprechenden Huts",
+      "start": 27080251,
+      "end": 29905771
+    },
+    {
+      "title": "Professor Umbridge",
+      "start": 29905771,
+      "end": 34005904
+    },
+    {
+      "title": "Strafarbeit bei Dolores",
+      "start": 34005904,
+      "end": 38031362
+    },
+    {
+      "title": "Percy und Tatze",
+      "start": 38031362,
+      "end": 41800123
+    },
+    {
+      "title": "Die Großinquisitorin von Hogwarts",
+      "start": 41800123,
+      "end": 45169640
+    },
+    {
+      "title": "Im Eberkopf",
+      "start": 45169640,
+      "end": 47911986
+    },
+    {
+      "title": "Ausbildungserlass Nummer vierundzwanzig",
+      "start": 47911986,
+      "end": 51184490
+    },
+    {
+      "title": "Dumbledores Armee",
+      "start": 51184490,
+      "end": 54470137
+    },
+    {
+      "title": "Der Löwe und die Schlange",
+      "start": 54470137,
+      "end": 57610798
+    },
+    {
+      "title": "Hagrids Geschichte",
+      "start": 57610798,
+      "end": 60646784
+    },
+    {
+      "title": "Das Auge der Schlange",
+      "start": 60646784,
+      "end": 64293083
+    },
+    {
+      "title": "St.-Mungo-Hospital für Magische Krankheiten und Verletzungen",
+      "start": 64293083,
+      "end": 68133663
+    },
+    {
+      "title": "Weihnachten auf der geschlossenen Station",
+      "start": 68133663,
+      "end": 71666393
+    },
+    {
+      "title": "Okklumentik",
+      "start": 71666393,
+      "end": 75722826
+    },
+    {
+      "title": "Der Käfer in der Klemme",
+      "start": 75722826,
+      "end": 79562942
+    },
+    {
+      "title": "Gesehen – unvorhergesehen",
+      "start": 79562942,
+      "end": 83674058
+    },
+    {
+      "title": "Der Zentaur und die Petze",
+      "start": 83674058,
+      "end": 87318058
+    },
+    {
+      "title": "Snapes schlimmste Erinnerung",
+      "start": 87318058,
+      "end": 91086285
+    },
+    {
+      "title": "Berufsberatung",
+      "start": 91086285,
+      "end": 94538674
+    },
+    {
+      "title": "Grawp",
+      "start": 94538674,
+      "end": 98481817
+    },
+    {
+      "title": "ZAGs",
+      "start": 98481817,
+      "end": 102160694
+    },
+    {
+      "title": "Aus dem Feuer",
+      "start": 102160694,
+      "end": 105057290
+    },
+    {
+      "title": "Kampf und Flucht",
+      "start": 105057290,
+      "end": 106868354
+    },
+    {
+      "title": "Die Mysteriumsabteilung",
+      "start": 106868354,
+      "end": 109219699
+    },
+    {
+      "title": "Jenseits des Schleiers",
+      "start": 109219699,
+      "end": 112705293
+    },
+    {
+      "title": "Der Einzige, den er je fürchtete",
+      "start": 112705293,
+      "end": 114532007
+    },
+    {
+      "title": "Die verlorene Prophezeiung",
+      "start": 114532007,
+      "end": 118546853
+    },
+    {
+      "title": "Der zweite Krieg beginnt",
+      "start": 118546853,
+      "end": 122263555
+    },
+    {
+      "title": "Die Geschichte geht weiter",
+      "start": 122263555,
+      "end": 124654737
+    }
+  ],
+  "duration_ms": 124654748,
+  "ribbon": "#d2b973"
+}

@@ -1,0 +1,26 @@
+[Unit]
+Description=Shelf (one login, one library, one audio player, behind `tailscale serve`)
+# Loopback only, like the other Pi apps. `tailscale serve` owns the tailnet
+# listener and has a real target to forward to.
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eustace
+Group=eustace
+WorkingDirectory=/home/eustace/shelf/app
+ExecStart=/usr/local/bin/node server.mjs
+Environment=SHELF_LIBRARY=/home/eustace/shelf/library
+Environment=SHELF_DATA=/home/eustace/shelf/data
+Environment=SHELF_PORT=13378
+Environment=SHELF_HOST=127.0.0.1
+Environment=SHELF_FFMPEG=/home/eustace/shelf/bin/ffmpeg
+Environment=SHELF_FFPROBE=/home/eustace/shelf/bin/ffprobe
+Environment=TZ=Europe/Dublin
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

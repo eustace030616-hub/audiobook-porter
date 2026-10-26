@@ -1,0 +1,25 @@
+# local state and secrets
+.env
+*.voucher
+*.key
+state/
+staging/
+library/
+*.egg-info/
+build/
+dist/
+
+# audiobook media
+*.m4b
+*.m4a
+*.mp3
+
+# tool noise
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
