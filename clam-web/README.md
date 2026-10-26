@@ -57,3 +57,16 @@ ssh eustace@berry 'systemctl --user enable --now clam-web.service'
 ```
 
 Access: `http://berry:13379`. The old client remains at `:13378`.
+
+
+## Stack status
+
+```
+React 19 + Vite 8 + TypeScript + Tailwind 4     follows pi-frame
+Hono + Store + fs/D1                            does not yet — this is a client preview
+proxy to the old Clam Node service              deliberate during acceptance
+```
+
+The preview proves the client and the visual system. It is **not yet a pi-frame app**: the API,
+auth and audio still belong to `shelf/server.mjs`. Moving them behind the `Store`/Hono seam is the
+teardown step after acceptance; until then the old service must stay up.
