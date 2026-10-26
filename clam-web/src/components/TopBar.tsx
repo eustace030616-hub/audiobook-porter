@@ -30,6 +30,8 @@ export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
   }, [open])
 
   const initial = (username.trim().charAt(0) || 'U').toUpperCase()
+  const themeIndex = Math.max(0, THEMES.findIndex((option) => option.id === theme))
+  const nextTheme = THEMES[(themeIndex + 1) % THEMES.length]
 
   return (
     <div className="sticky top-0 z-[8] bg-paper pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
@@ -62,26 +64,23 @@ export function TopBar({ username, theme, onTheme, onLogout }: TopBarProps) {
                 </button>
                 <div className="mt-4">
                   <p className="micro">Style</p>
-                  <div className="mt-2 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    className="theme-cycle mt-1.5"
+                    aria-label={`Theme: ${THEMES[themeIndex].label}. Switch to ${nextTheme.label}`}
+                    title={`Theme: ${THEMES[themeIndex].label} → ${nextTheme.label}`}
+                    onClick={() => onTheme(nextTheme.id)}
+                  >
                     {THEMES.map((option) => (
-                      <button
+                      <span
                         key={option.id}
-                        type="button"
-                        data-theme-choice={option.id}
-                        aria-pressed={theme === option.id}
-                        className={`grid gap-1.5 border p-0 text-[10px] uppercase tracking-[0.08em] ${
-                          theme === option.id ? 'border-rule text-ink' : 'border-hair text-muted'
+                        className={`theme-cycle__swatch theme-cycle__swatch--${option.id}${
+                          option.id === theme ? ' is-active' : ''
                         }`}
-                        onClick={() => {
-                          onTheme(option.id)
-                          setOpen(false)
-                        }}
-                      >
-                        <span className={`theme-swatch ${option.className}`}>Aa</span>
-                        <span>{option.label}</span>
-                      </button>
+                        aria-hidden="true"
+                      />
                     ))}
-                  </div>
+                  </button>
                 </div>
               </div>
             ) : null}

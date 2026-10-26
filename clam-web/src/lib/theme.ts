@@ -1,9 +1,9 @@
 import type { Theme } from '../types'
 
-export const THEMES: { id: Theme; label: string; className: string }[] = [
-  { id: 'paper', label: 'Paper', className: 'theme-paper' },
-  { id: 'sepia', label: 'Sepia', className: 'theme-sepia' },
-  { id: 'night', label: 'Night', className: 'theme-night' },
+export const THEMES: { id: Theme; label: string }[] = [
+  { id: 'paper', label: 'Paper' },
+  { id: 'sepia', label: 'Sepia' },
+  { id: 'night', label: 'Night' },
 ]
 
 const KEY = 'clam:theme'

@@ -418,29 +418,42 @@
     font-weight: 700;
   }
 
-  .theme-swatch {
-    display: grid;
-    place-items: center;
-    height: 48px;
-    border-bottom: 1px solid var(--hair);
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: -0.03em;
+  .theme-cycle {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+    height: 32px;
+    padding: 3px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    cursor: pointer;
   }
 
-  .theme-paper {
+  .theme-cycle:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .theme-cycle__swatch {
+    flex: 0 1 30px;
+    min-width: 0;
+    transition: flex-grow 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .theme-cycle__swatch.is-active {
+    flex-grow: 1;
+  }
+
+  .theme-cycle__swatch--paper {
     background: #fafafa;
-    color: #18181b;
   }
 
-  .theme-sepia {
+  .theme-cycle__swatch--sepia {
     background: #f4ecd8;
-    color: #322a24;
   }
 
-  .theme-night {
+  .theme-cycle__swatch--night {
     background: #121214;
-    color: #e9e7e2;
   }
 
   .splash {
