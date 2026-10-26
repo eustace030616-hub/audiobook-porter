@@ -448,6 +448,7 @@ function loadBooks() {
     let id = ''
     let audioVersion = 0
     let audioMode = 'single'
+    let continuousFile = null
 
     if (split) {
       audioMode = 'chapters'
@@ -468,6 +469,11 @@ function loadBooks() {
         audioVersion = Math.max(audioVersion, Math.round(stat.mtimeMs))
       }
       if (!chapters.length) continue
+      const continuousName = cleanName(meta.continuous_file) || 'book.m4b'
+      const continuousCandidate = path.resolve(dir, continuousName)
+      if (continuousCandidate.startsWith(`${dir}${path.sep}`) && fs.existsSync(continuousCandidate)) {
+        continuousFile = continuousCandidate
+      }
       if (/^[a-f0-9]{12}$/.test(String(meta.id || ''))) {
         id = meta.id
       } else {
@@ -519,6 +525,7 @@ function loadBooks() {
       id,
       file: audio,
       audioMode,
+      continuousFile,
       dir,
       title,
       displayTitle: displayTitle || title,
@@ -595,6 +602,10 @@ function bookById(id) {
 }
 
 function publicBook(book) {
+  let continuousVersion = 0
+  if (book.continuousFile) {
+    try { continuousVersion = Math.round(fs.statSync(book.continuousFile).mtimeMs) } catch {}
+  }
   return {
     id: book.id,
     title: book.title,
@@ -609,6 +620,8 @@ function publicBook(book) {
     narrator: book.narrator,
     description: book.description,
     audioMode: book.audioMode,
+    continuousUrl: book.continuousFile ? `/audio/${book.id}` : '',
+    continuousVersion,
     chapters: book.chapters.map((chapter) => ({
       index: chapter.index,
       title: chapter.title,
@@ -920,11 +933,16 @@ function serveAudio(req, res, id, chapterParam) {
   if (!book) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
   let file = book.file
   if (book.audioMode === 'chapters') {
-    const chapter = Number(chapterParam)
-    if (!Number.isInteger(chapter) || chapter < 0 || chapter >= book.chapters.length) {
-      return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+    if (chapterParam === undefined || chapterParam === null || chapterParam === '') {
+      if (!book.continuousFile) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+      file = book.continuousFile
+    } else {
+      const chapter = Number(chapterParam)
+      if (!Number.isInteger(chapter) || chapter < 0 || chapter >= book.chapters.length) {
+        return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+      }
+      file = book.chapters[chapter].file
     }
-    file = book.chapters[chapter].file
   }
   let stat
   try {

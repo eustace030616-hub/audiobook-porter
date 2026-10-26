@@ -126,6 +126,16 @@ an embedded player:
 
 The mini-player uses the same gesture model.
 
+Split chapter files are still used for fast first start. For continuous playback — especially
+while an iPhone is locked — each book also has a concatenated `book.m4b`:
+
+```bash
+python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bin/ffmpeg
+```
+
+The API exposes `continuousUrl`; the new client plays that one file and maps chapter boundaries onto
+it. The old client keeps using `chapters/` until it is retired.
+
 Playback position is written to `localStorage` while playing and to
 `~/shelf/data/progress.json` every few seconds and on page close. Listening time
 is accumulated in `~/shelf/data/listening.json` and shown as the current week’s

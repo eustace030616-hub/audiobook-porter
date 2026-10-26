@@ -96,7 +96,33 @@ export function chapterFor(book: Book | null, index: number) {
   return book.chapters[Math.max(0, Math.min(book.chapters.length - 1, index))] || null
 }
 
+export function isContinuous(book: Book | null): boolean {
+  return Boolean(book?.continuousUrl && book.chapters.length)
+}
+
+export function chapterStart(book: Book, index: number): number {
+  return Math.max(0, (book.chapters[index]?.start || 0) / 1000)
+}
+
+export function chapterDuration(book: Book, index: number): number {
+  const chapter = book.chapters[index]
+  if (!chapter) return 0
+  return Math.max(0, Number(chapter.duration) || (chapter.end - chapter.start) / 1000)
+}
+
+export function chapterAt(book: Book, absoluteSeconds: number): number {
+  if (!book.chapters.length) return 0
+  const ms = Math.max(0, absoluteSeconds) * 1000
+  let index = 0
+  for (let i = 0; i < book.chapters.length; i += 1) {
+    if (ms >= (book.chapters[i].start || 0)) index = i
+    else break
+  }
+  return index
+}
+
 export function audioUrl(book: Book, index: number): string {
+  if (book.continuousUrl) return `${book.continuousUrl}?v=${book.continuousVersion || book.audioVersion || 0}`
   if (book.audioMode === 'chapters') {
     const chapter = chapterFor(book, index)
     return `/audio/${book.id}/${index}?v=${chapter?.fileVersion || 0}`

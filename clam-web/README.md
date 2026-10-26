@@ -70,3 +70,20 @@ proxy to the old Clam Node service              deliberate during acceptance
 The preview proves the client and the visual system. It is **not yet a pi-frame app**: the API,
 auth and audio still belong to `shelf/server.mjs`. Moving them behind the `Store`/Hono seam is the
 teardown step after acceptance; until then the old service must stay up.
+
+
+## Continuous playback (iOS lock screen)
+
+A split chapter file cannot be advanced by JavaScript while the iPhone screen is locked: the
+`ended` event is queued until the app returns to the foreground. The new client therefore plays one
+continuous `book.m4b` per book and maps the existing chapter start/end times onto it. The OS media
+stack advances through chapter boundaries; JS only updates the chapter label when it resumes.
+
+```bash
+# on the Pi, after the split chapters exist
+python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bin/ffmpeg
+```
+
+The script writes `book.m4b` and `continuous_file` into `metadata.json`. The old client continues to
+use the split files; the API exposes `continuousUrl` only as an extra field, so the old client is
+unaffected until it is retired.

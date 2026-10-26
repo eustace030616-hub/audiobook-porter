@@ -21,6 +21,8 @@ export interface Book {
   narrator: string
   description: string
   audioMode: 'single' | 'chapters'
+  continuousUrl: string
+  continuousVersion: number
   chapters: Chapter[]
   duration: number
   durationLabel: string
