@@ -25,5 +25,5 @@ Sleep fade and Media Session are behaviour-only captures: the fade is the last
 metadata, position and previous/next actions from the same player state.
 
 `transcript-390-after.png` is HP5 chapter 10 with EPUB text and an ASR-derived
-timeline, grouped into 2–3 sentence blocks; `transcript-fallback-390-after.png` is a chapter without a subtitle
+timeline; `transcript-fallback-390-after.png` is a chapter without a subtitle
 file, showing the normal book-description placeholder.

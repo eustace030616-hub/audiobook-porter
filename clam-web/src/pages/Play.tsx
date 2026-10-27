@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Book as BookType } from '../types'
 import { chapterFor, clock, savedProgress } from '../lib/progress'
-import { cueAt, groupCues, loadTranscript, type Transcript } from '../lib/subtitles'
+import { cueAt, loadTranscript, type Transcript } from '../lib/subtitles'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -24,7 +24,7 @@ export function Play({ book, search }: PlayProps) {
   const [drag, setDrag] = useState<number | null>(null)
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
-  const currentBlock = useRef<HTMLButtonElement>(null)
+  const currentCue = useRef<HTMLButtonElement>(null)
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -56,12 +56,6 @@ export function Play({ book, search }: PlayProps) {
   const percent = duration ? Math.min(100, (shown / duration) * 100) : 0
   const chapterLine = book.chapters.length ? `Chapter ${chapterIndex + 1} of ${book.chapters.length}` : book.title
   const currentCueIndex = transcript ? cueAt(transcript.cues, current) : -1
-  const blocks = transcript ? groupCues(transcript.cues) : []
-  let currentBlockIndex = -1
-  for (let i = 0; i < blocks.length; i += 1) {
-    if (blocks[i].firstCue <= currentCueIndex) currentBlockIndex = i
-    else break
-  }
 
   useEffect(() => {
     setTranscript(null)
@@ -80,8 +74,8 @@ export function Play({ book, search }: PlayProps) {
 
   useEffect(() => {
     if (!showDescription || !transcript) return
-    currentBlock.current?.scrollIntoView({ block: 'center' })
-  }, [showDescription, transcript, currentBlockIndex])
+    currentCue.current?.scrollIntoView({ block: 'center' })
+  }, [showDescription, transcript, currentCueIndex])
   const speedLabel = player.speed === 1 ? '1×' : `${player.speed}×`
   const sleepSeconds = Math.max(0, Math.ceil(player.sleepRemaining || 0))
   const sleepLabel = !player.sleep
@@ -156,16 +150,16 @@ export function Play({ book, search }: PlayProps) {
                 <p className="micro">Transcription · Deutsch</p>
                 <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
                 <div className="transcript mt-5">
-                  {blocks.map((block, index) => (
+                  {transcript.cues.map((cue, index) => (
                     <button
-                      key={`${block.start}-${index}`}
-                      ref={index === currentBlockIndex ? currentBlock : undefined}
+                      key={`${cue.start}-${index}`}
+                      ref={index === currentCueIndex ? currentCue : undefined}
                       type="button"
-                      className={`transcript__block${index === currentBlockIndex ? ' is-current' : ''}`}
-                      aria-current={index === currentBlockIndex ? 'true' : undefined}
-                      onClick={() => player.seekTo(block.start)}
+                      className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
+                      aria-current={index === currentCueIndex ? 'true' : undefined}
+                      onClick={() => player.seekTo(cue.start)}
                     >
-                      {block.text}
+                      {cue.text}
                     </button>
                   ))}
                 </div>
