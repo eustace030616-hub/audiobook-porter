@@ -206,10 +206,12 @@ clock; the EPUB is the transcript.
 The chapter-10 example currently has 565 sentence rows. Paragraph and dialogue
 boundaries are preserved; a single row never contains multiple sentences.
 
-In the transcript, every word is a button. Tapping one opens a small card with
-the German wordbook sense and a saved-word star; the card closes itself after
-three seconds. Known words use the cached German wordbook (`public/wordbook/`),
-and unknown words fall back to `/api/word/translate`. Word taps never seek.
+In the transcript, every word is a button. Tapping one fills a thin persistent
+banner below the transcript with the original dictionary form and its English
+translation, plus a saved-word star. Known words use the cached German wordbook
+(`public/wordbook/`), and unknown words fall back to `/api/word/translate`.
+Word taps never seek. The banner keeps one text line of space above the
+transcript header.
 
 In the Play screen, the `Transcript` / `Cover` button at the left end of the
 chapter row switches the stage. Tapping the cover is no longer a control. If

@@ -28,5 +28,7 @@ the chapter row, with the chapter list at the right end.
 `transcript-70-390-after.png` is the current 70%-anchored transcript at
 19:07, with the timestamp hit target contained inside its row.
 
-`transcript-word-390-after.png` shows a transcript word card for "Mitglieder":
-the word, article/plural/level, English gloss, and the saved-word star.
+`transcript-word-390-after.png` shows the thin translation banner for
+"Mitglieder": `das Mitglied` on the left, `member` on the right, and the
+saved-word star at the end. The banner is persistent and sits above the
+Transcript/Cover and chapter-list row.

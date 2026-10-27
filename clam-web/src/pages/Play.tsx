@@ -3,7 +3,7 @@ import type { Book as BookType } from '../types'
 import { chapterFor, clock, savedProgress } from '../lib/progress'
 import { cueAt, loadTranscript, type Transcript } from '../lib/subtitles'
 import { loadWordbook, segmentWords, type WordSegment } from '../lib/wordlookup'
-import { WordCard, type WordSelection } from '../components/WordCard'
+import { WordBanner, type WordSelection } from '../components/WordBanner'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -16,14 +16,7 @@ function shortTime(seconds: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
 }
 
-interface WordAnchor {
-  top: number
-  left: number
-  width: number
-  height: number
-}
-
-type WordHandler = (surface: string, sentence: string, cueStart: number, anchor: WordAnchor) => void
+type WordHandler = (surface: string, sentence: string, cueStart: number) => void
 
 interface WordButtonsProps {
   segments: WordSegment[]
@@ -39,15 +32,7 @@ const WordButtons = memo(function WordButtons({ segments, sentence, cueStart, on
         key={index}
         type="button"
         className="transcript__word"
-        onClick={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect()
-          onWord(part.text, sentence, cueStart, {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height,
-          })
-        }}
+        onClick={() => onWord(part.text, sentence, cueStart)}
       >
         {part.text}
       </button>
@@ -75,7 +60,6 @@ export function Play({ book, search }: PlayProps) {
   const dialogList = useRef<HTMLDivElement>(null)
   const currentCue = useRef<HTMLParagraphElement>(null)
   const textOverlay = useRef<HTMLDivElement>(null)
-  const closeWord = useCallback(() => setWord(null), [])
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -112,7 +96,7 @@ export function Play({ book, search }: PlayProps) {
     [transcript],
   )
 
-  const openWord = useCallback<WordHandler>((surface, sentence, cueStart, anchor) => {
+  const openWord = useCallback<WordHandler>((surface, sentence, cueStart) => {
     setWord({
       surface,
       sentence,
@@ -121,7 +105,6 @@ export function Play({ book, search }: PlayProps) {
       bookTitle: book.title,
       chapterIndex,
       chapterTitle: chapter?.title || book.title,
-      anchor,
     })
   }, [book.id, book.title, chapter?.title, chapterIndex])
 
@@ -227,6 +210,7 @@ export function Play({ book, search }: PlayProps) {
         >
           {transcript ? (
             <div>
+              <div className="transcript__top-space" aria-hidden="true" />
               <p className="micro">Transcription · Deutsch</p>
               <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
               <div className="transcript mt-5">
@@ -271,8 +255,9 @@ export function Play({ book, search }: PlayProps) {
             </>
           )}
         </div>
-        {word && showDescription ? <WordCard selection={word} onClose={closeWord} /> : null}
       </div>
+
+        <WordBanner selection={word} />
 
         <div className="mt-2 flex items-center justify-between gap-4">
           <button
