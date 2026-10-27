@@ -890,8 +890,7 @@
 
 
   .play-lower {
-    margin-top: 0;
-    transform: translateY(12px);
+    margin-top: 12px;
   }
 
 
@@ -920,9 +919,9 @@
 
   .transcript-edge--bottom {
     bottom: 0;
-    height: 8px;
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
+    height: 6px;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     background: linear-gradient(
       to top,
       var(--paper) 0%,

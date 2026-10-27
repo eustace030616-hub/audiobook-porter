@@ -266,10 +266,10 @@ export function Play({ book, search }: PlayProps) {
       <div className="play-lower">
         <WordBanner selection={word} />
 
-        <div className="mt-3 flex items-center justify-between gap-4">
+        <div className="mt-1 flex items-center justify-between gap-4">
           <button
             type="button"
-            className="min-h-11 p-0 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+            className="min-h-8 p-0 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
             aria-label={showDescription ? 'Show cover' : `Show ${textToggleLabel.toLowerCase()}`}
             onClick={() => setShowDescription((value) => !value)}
           >
@@ -277,7 +277,7 @@ export function Play({ book, search }: PlayProps) {
           </button>
           <button
             type="button"
-            className="min-h-11 p-0 text-right text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+            className="min-h-8 p-0 text-right text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
             onClick={() => setChaptersOpen(true)}
             aria-label="Open chapter list"
           >
@@ -286,7 +286,7 @@ export function Play({ book, search }: PlayProps) {
         </div>
       </div>
 
-        <div className="mt-3">
+        <div className="mt-1">
           <div className="seek-wrap">
             <div className="seek-track" aria-hidden="true">
               <div className="seek-fill" style={{ width: `${percent}%` }} />
