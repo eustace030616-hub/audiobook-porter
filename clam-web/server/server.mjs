@@ -1,6 +1,7 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createGzip } from 'node:zlib'
 import { Readable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 
@@ -80,6 +81,49 @@ function readBody(req) {
     req.on('end', () => resolve(Buffer.concat(chunks)))
     req.on('error', reject)
   })
+}
+
+
+const wordCache = new Map()
+
+async function translateWord(req, res, url) {
+  const session = sessionFrom(req)
+  if (!session) return sendJson(res, 401, { error: 'Sign in first' })
+  const word = (url.searchParams.get('q') || '').trim()
+  const source = (url.searchParams.get('source') || 'de').trim()
+  const target = (url.searchParams.get('target') || 'en').trim()
+  if (source !== 'de' || target !== 'en' || !/^[\p{L}][\p{L}\p{M}'’\-]{0,63}$/u.test(word)) {
+    return sendJson(res, 400, { error: 'Expected one German word' })
+  }
+  const key = word.normalize('NFC').toLowerCase()
+  const hit = wordCache.get(key)
+  if (hit) return sendJson(res, 200, { ...hit, cached: true })
+
+  const upstream = new URL('https://api.mymemory.translated.net/get')
+  upstream.searchParams.set('q', word)
+  upstream.searchParams.set('langpair', 'de|en')
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 4000)
+  try {
+    const response = await fetch(upstream, {
+      signal: controller.signal,
+      headers: { accept: 'application/json', 'user-agent': 'Clam/0.1' },
+    })
+    if (!response.ok) return sendJson(res, 502, { error: 'Translation unavailable' })
+    const payload = await response.json()
+    const text = String(payload?.responseData?.translatedText || '').trim()
+    if (!text || text.toLowerCase() === word.toLowerCase() || /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE/i.test(text)) {
+      return sendJson(res, 404, { error: 'No translation' })
+    }
+    const value = { translation: text.slice(0, 120), provider: 'MyMemory' }
+    wordCache.set(key, value)
+    if (wordCache.size > 400) wordCache.delete(wordCache.keys().next().value)
+    return sendJson(res, 200, { ...value, cached: false })
+  } catch {
+    return sendJson(res, 502, { error: 'Translation unavailable' })
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 async function proxy(req, res, url) {
@@ -196,6 +240,9 @@ function serveStatic(req, res, url) {
   if (pathname === '/__auth/login' && req.method === 'POST') return login(req, res)
   if (pathname === '/__auth/logout' && req.method === 'POST') return logout(req, res)
 
+  if (pathname === '/api/word/translate' && req.method === 'GET') {
+    return translateWord(req, res, url)
+  }
   if (pathname.startsWith('/api/') || pathname.startsWith('/audio/') || pathname.startsWith('/cover/') || pathname.startsWith('/subtitle/')) {
     return proxy(req, res, url)
   }
@@ -215,18 +262,32 @@ function serveStatic(req, res, url) {
     : pathname.startsWith('/assets/')
       ? 'public, max-age=31536000, immutable'
       : 'no-cache'
-  res.writeHead(200, {
+  const gzip = /^(text|application\/(json|javascript|manifest\+json)|image\/svg)/.test(MIME[ext] || '') &&
+    /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))
+  const headers = {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Cache-Control': cache,
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; script-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-  })
+  }
+  if (gzip) {
+    headers['Content-Encoding'] = 'gzip'
+    headers.Vary = 'Accept-Encoding'
+  }
+  res.writeHead(200, headers)
   if (req.method === 'HEAD') {
     res.end()
     return
   }
-  fs.createReadStream(file).on('error', () => res.destroy()).pipe(res)
+  const source = fs.createReadStream(file).on('error', () => res.destroy())
+  if (gzip) {
+    const zip = createGzip({ level: 6 })
+    zip.on('error', () => res.destroy())
+    source.pipe(zip).pipe(res)
+  } else {
+    source.pipe(res)
+  }
 }
 
 if (!fs.existsSync(path.join(DIST, 'index.html'))) {

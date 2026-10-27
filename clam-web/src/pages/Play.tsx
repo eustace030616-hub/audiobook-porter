@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Book as BookType } from '../types'
 import { chapterFor, clock, savedProgress } from '../lib/progress'
 import { cueAt, loadTranscript, type Transcript } from '../lib/subtitles'
+import { loadWordbook, segmentWords, type WordSegment } from '../lib/wordlookup'
+import { WordCard, type WordSelection } from '../components/WordCard'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -13,6 +15,47 @@ function shortTime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds))
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
 }
+
+interface WordAnchor {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+type WordHandler = (surface: string, sentence: string, cueStart: number, anchor: WordAnchor) => void
+
+interface WordButtonsProps {
+  segments: WordSegment[]
+  sentence: string
+  cueStart: number
+  onWord: WordHandler
+}
+
+const WordButtons = memo(function WordButtons({ segments, sentence, cueStart, onWord }: WordButtonsProps) {
+  return segments.map((part, index) =>
+    part.word ? (
+      <button
+        key={index}
+        type="button"
+        className="transcript__word"
+        onClick={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect()
+          onWord(part.text, sentence, cueStart, {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          })
+        }}
+      >
+        {part.text}
+      </button>
+    ) : (
+      <span key={index}>{part.text}</span>
+    ),
+  )
+})
 
 interface PlayProps {
   book: BookType
@@ -27,10 +70,12 @@ export function Play({ book, search }: PlayProps) {
   const [transcript, setTranscript] = useState<Transcript | null>(null)
   const [transcriptLoading, setTranscriptLoading] = useState(false)
   const [drag, setDrag] = useState<number | null>(null)
+  const [word, setWord] = useState<WordSelection | null>(null)
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
   const currentCue = useRef<HTMLParagraphElement>(null)
   const textOverlay = useRef<HTMLDivElement>(null)
+  const closeWord = useCallback(() => setWord(null), [])
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -62,10 +107,28 @@ export function Play({ book, search }: PlayProps) {
   const percent = duration ? Math.min(100, (shown / duration) * 100) : 0
   const chapterLine = book.chapters.length ? `Chapter ${chapterIndex + 1} of ${book.chapters.length}` : book.title
   const currentCueIndex = transcript ? cueAt(transcript.cues, current) : -1
+  const cueSegments = useMemo(
+    () => transcript?.cues.map((cue) => segmentWords(cue.text)) ?? [],
+    [transcript],
+  )
+
+  const openWord = useCallback<WordHandler>((surface, sentence, cueStart, anchor) => {
+    setWord({
+      surface,
+      sentence,
+      cueStart,
+      bookId: book.id,
+      bookTitle: book.title,
+      chapterIndex,
+      chapterTitle: chapter?.title || book.title,
+      anchor,
+    })
+  }, [book.id, book.title, chapter?.title, chapterIndex])
 
   useEffect(() => {
     setTranscript(null)
     setTranscriptLoading(false)
+    setWord(null)
     const url = chapter?.subtitleUrl
     if (!url) return
     let alive = true
@@ -77,6 +140,15 @@ export function Play({ book, search }: PlayProps) {
     })
     return () => { alive = false }
   }, [chapter?.subtitleUrl])
+
+  useEffect(() => {
+    if (!showDescription) setWord(null)
+  }, [showDescription])
+
+  useEffect(() => {
+    if (!showDescription || !transcript) return
+    void loadWordbook().catch(() => undefined)
+  }, [showDescription, transcript])
 
   useEffect(() => {
     if (!showDescription || !transcript) return
@@ -176,7 +248,12 @@ export function Play({ book, search }: PlayProps) {
                       className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
                       aria-current={index === currentCueIndex ? 'true' : undefined}
                     >
-                      {cue.text}
+                      <WordButtons
+                        segments={cueSegments[index] ?? []}
+                        sentence={cue.text}
+                        cueStart={cue.start}
+                        onWord={openWord}
+                      />
                     </p>
                   </div>
                 ))}
@@ -194,6 +271,7 @@ export function Play({ book, search }: PlayProps) {
             </>
           )}
         </div>
+        {word && showDescription ? <WordCard selection={word} onClose={closeWord} /> : null}
       </div>
 
         <div className="mt-2 flex items-center justify-between gap-4">
