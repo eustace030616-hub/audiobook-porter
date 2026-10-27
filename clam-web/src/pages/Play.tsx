@@ -75,6 +75,10 @@ export function Play({ book, search }: PlayProps) {
       : player.book?.id === book.id
         ? player.chapter
         : saved.chapter
+    // Opening the player from the mini player or Continue banner must be a
+    // view change, not a seek. Two `prepare` calls on the same live chapter can
+    // restore a position saved a fraction of a second ago and audibly rewind.
+    if (player.book?.id === book.id && player.chapter === target) return
     void player.prepare(book, { chapterIndex: target, restore: !autoplay, autoplay })
     // The route book is the only input that should switch the playing book.
     // eslint-disable-next-line react-hooks/exhaustive-deps
