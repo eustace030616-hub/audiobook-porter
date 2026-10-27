@@ -257,6 +257,7 @@ export function Play({ book, search }: PlayProps) {
         </div>
       </div>
 
+      <div className="play-lower">
         <WordBanner selection={word} />
 
         <div className="mt-3 flex items-center justify-between gap-4">
@@ -277,6 +278,7 @@ export function Play({ book, search }: PlayProps) {
             {chapterLine}
           </button>
         </div>
+      </div>
 
         <div className="mt-3">
           <div className="seek-wrap">

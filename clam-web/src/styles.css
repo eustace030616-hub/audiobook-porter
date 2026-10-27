@@ -885,3 +885,9 @@
     height: 24px;
     background: var(--paper);
   }
+
+
+  .play-lower {
+    margin-top: 12px;
+    transform: translateY(12px);
+  }
