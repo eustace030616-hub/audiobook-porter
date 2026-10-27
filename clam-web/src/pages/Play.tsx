@@ -3,7 +3,7 @@ import type { Book as BookType } from '../types'
 import { chapterFor, clock, savedProgress } from '../lib/progress'
 import { cueAt, loadTranscript, type Transcript } from '../lib/subtitles'
 import { loadWordbook, segmentWords, type WordSegment } from '../lib/wordlookup'
-import { WordBanner, type WordSelection } from '../components/WordBanner'
+import { WordDropdown, type WordSelection } from '../components/WordDropdown'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -255,18 +255,10 @@ export function Play({ book, search }: PlayProps) {
             </>
           )}
         </div>
-        {showDescription ? (
-          <>
-            <div className="transcript-edge transcript-edge--top" aria-hidden="true" />
-            <div className="transcript-edge transcript-edge--bottom" aria-hidden="true" />
-          </>
-        ) : null}
+        {word && showDescription ? <WordDropdown selection={word} /> : null}
       </div>
 
-      <div className="play-lower">
-        <WordBanner selection={word} />
-
-        <div className="mt-1 flex items-center justify-between gap-4">
+        <div className="mt-2 flex items-center justify-between gap-4">
           <button
             type="button"
             className="min-h-8 p-0 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
@@ -284,7 +276,6 @@ export function Play({ book, search }: PlayProps) {
             {chapterLine}
           </button>
         </div>
-      </div>
 
         <div className="mt-0">
           <div className="seek-wrap">

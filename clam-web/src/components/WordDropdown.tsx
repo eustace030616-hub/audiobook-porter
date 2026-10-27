@@ -26,7 +26,7 @@ type Dictionary = { status: 'loading' | 'ready' | 'error'; data: WordbookData | 
 
 const translationCache = new Map<string, { text: string; provider?: string }>()
 
-export function WordBanner({ selection }: WordBannerProps) {
+export function WordDropdown({ selection }: WordBannerProps) {
   const [dictionary, setDictionary] = useState<Dictionary>({ status: 'loading', data: null })
   const [lookup, setLookup] = useState<WordLookup | null>(null)
   const [translation, setTranslation] = useState<Translation>({ status: 'idle' })
@@ -85,17 +85,19 @@ export function WordBanner({ selection }: WordBannerProps) {
     : selection?.surface ?? ''
   const gloss = entry?.shortGloss ?? (translation.status === 'ready' ? translation.text : '')
   const pending = dictionary.status === 'loading' || (lookup?.status === 'missing' && translation.status === 'loading')
+  const meta = [entry?.pos, entry?.level].filter(Boolean).join(' · ')
+
+  if (!selection) return null
 
   return (
-    <div className="word-banner" role="status" aria-live="polite">
-      {selection ? (
-        <>
-          <span className="word-banner__word">{original}</span>
-          <span className="word-banner__gloss">
-            {pending ? '…' : gloss || (translation.status === 'error' ? 'no translation' : '')}
-          </span>
-        </>
-      ) : null}
+    <div className="word-dropdown" role="status" aria-live="polite">
+      <div className="word-dropdown__head">
+        <span className="word-dropdown__word">{original}</span>
+        {meta ? <span className="word-dropdown__meta">{meta}</span> : null}
+      </div>
+      <p className="word-dropdown__gloss">
+        {pending ? '…' : gloss || (translation.status === 'error' ? 'no translation' : '')}
+      </p>
     </div>
   )
 }
