@@ -871,6 +871,11 @@
     line-height: 1.35;
   }
 
+  .word-dropdown.is-closing {
+    pointer-events: none;
+    animation: word-drop-out 180ms ease-in forwards;
+  }
+
   @keyframes word-drop {
     from {
       opacity: 0;
@@ -882,8 +887,20 @@
     }
   }
 
+  @keyframes word-drop-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .word-dropdown {
+    .word-dropdown,
+    .word-dropdown.is-closing {
       animation: none;
     }
   }

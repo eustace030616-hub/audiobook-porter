@@ -29,6 +29,7 @@ const translationCache = new Map<string, { text: string; provider?: string }>()
 
 export function WordDropdown({ selection, onClose }: WordBannerProps) {
   const root = useRef<HTMLDivElement>(null)
+  const [closing, setClosing] = useState(false)
   const [dictionary, setDictionary] = useState<Dictionary>({ status: 'loading', data: null })
   const [lookup, setLookup] = useState<WordLookup | null>(null)
   const [translation, setTranslation] = useState<Translation>({ status: 'idle' })
@@ -90,20 +91,33 @@ export function WordDropdown({ selection, onClose }: WordBannerProps) {
   const meta = [entry?.pos, entry?.level].filter(Boolean).join(' · ')
 
   useEffect(() => {
+    setClosing(false)
+    if (!selection) return
+    const timer = window.setTimeout(() => setClosing(true), 3000)
+    return () => window.clearTimeout(timer)
+  }, [selection])
+
+  useEffect(() => {
+    if (!closing) return
+    const timer = window.setTimeout(onClose, 180)
+    return () => window.clearTimeout(timer)
+  }, [closing, onClose])
+
+  useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target instanceof Element ? event.target : null
       if (root.current?.contains(target)) return
       if (target?.closest('.transcript__word, .transcript__time')) return
-      onClose()
+      setClosing(true)
     }
     document.addEventListener('pointerdown', onPointerDown, true)
     return () => document.removeEventListener('pointerdown', onPointerDown, true)
-  }, [onClose])
+  }, [])
 
   if (!selection) return null
 
   return (
-    <div ref={root} className="word-dropdown" role="status" aria-live="polite">
+    <div ref={root} className={`word-dropdown${closing ? ' is-closing' : ''}`} role="status" aria-live="polite">
       <div className="word-dropdown__head">
         <span className="word-dropdown__word">{original}</span>
         {meta ? <span className="word-dropdown__meta">{meta}</span> : null}

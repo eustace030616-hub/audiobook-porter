@@ -133,12 +133,6 @@ export function Play({ book, search }: PlayProps) {
   }, [showDescription])
 
   useEffect(() => {
-    if (!word) return
-    const timer = window.setTimeout(() => setWord(null), 3000)
-    return () => window.clearTimeout(timer)
-  }, [word])
-
-  useEffect(() => {
     if (!showDescription || !transcript) return
     void loadWordbook().catch(() => undefined)
   }, [showDescription, transcript])
@@ -205,11 +199,7 @@ export function Play({ book, search }: PlayProps) {
           ref={textOverlay}
           className={`play-text-overlay absolute inset-0 overflow-y-auto bg-paper transition-opacity duration-200 ${
             showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-          onClick={() => {
-            if (word) setWord(null)
-          }}
-        >
+          }`}        >
           {transcript ? (
             <div>
               <div className="transcript__top-space" aria-hidden="true" />
