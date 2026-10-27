@@ -15,7 +15,9 @@ export function Book({ book }: BookProps) {
   const [descriptionOpen, setDescriptionOpen] = useState(false)
   const [descriptionCanExpand, setDescriptionCanExpand] = useState(false)
   const [chaptersOpen, setChaptersOpen] = useState(false)
-  const description = useRef<HTMLButtonElement>(null)
+  const description = useRef<HTMLDivElement>(null)
+  const chapterHeader = useRef<HTMLDivElement>(null)
+  const chapterList = useRef<HTMLOListElement>(null)
   const chapterAnchor = useRef<HTMLLIElement>(null)
 
   useEffect(() => {
@@ -50,7 +52,16 @@ export function Book({ book }: BookProps) {
   useEffect(() => {
     if (!chaptersOpen) return
     const frame = window.requestAnimationFrame(() => {
-      chapterAnchor.current?.scrollIntoView({ block: 'start' })
+      const header = chapterHeader.current
+      if (header) {
+        const top = header.getBoundingClientRect().top + window.scrollY - 64
+        window.scrollTo({ top: Math.max(0, top), behavior: 'auto' })
+      }
+      const list = chapterList.current
+      const row = chapterAnchor.current
+      if (!list || !row) return
+      const top = row.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
+      list.scrollTop = Math.max(0, top - 8)
     })
     return () => window.cancelAnimationFrame(frame)
   }, [chaptersOpen, currentIndex, book.id])
@@ -76,17 +87,24 @@ export function Book({ book }: BookProps) {
           </p>
           {book.description ? (
             <div className="book-description mt-6">
-              <button
+              <div
                 ref={description}
-                type="button"
+                role={descriptionCanExpand ? 'button' : undefined}
+                tabIndex={descriptionCanExpand ? 0 : undefined}
                 className={`book-description__text${descriptionOpen ? '' : ' is-clamped'}`}
                 aria-expanded={descriptionCanExpand ? descriptionOpen : undefined}
                 onClick={() => {
                   if (descriptionCanExpand) setDescriptionOpen((value) => !value)
                 }}
+                onKeyDown={(event) => {
+                  if (!descriptionCanExpand) return
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  event.preventDefault()
+                  setDescriptionOpen((value) => !value)
+                }}
               >
                 {book.description}
-              </button>
+              </div>
               {descriptionCanExpand ? (
                 <button
                   type="button"
@@ -100,8 +118,8 @@ export function Book({ book }: BookProps) {
             </div>
           ) : null}
 
-          <section className="mt-10">
-            <div className="flex items-baseline justify-between gap-4 pb-4">
+          <section className={`book-chapters mt-10${chaptersOpen ? ' is-open' : ''}`}>
+            <div ref={chapterHeader} className="book-chapters__head flex items-baseline justify-between gap-4 pb-4">
               <button
                 type="button"
                 className="chapter-toggle flex min-h-11 items-baseline gap-3 text-left"
@@ -117,7 +135,7 @@ export function Book({ book }: BookProps) {
               <p className="micro">{book.chapters.length || 0}</p>
             </div>
             {book.chapters.length ? (
-              <ol id="book-chapter-list" className="border-t border-hair">
+              <ol ref={chapterList} id="book-chapter-list" className="book-chapters__list border-t border-hair">
                 {chapterIndices.map((index) => {
                   const chapter = book.chapters[index]
                   const isCurrent = currentIndex === index

@@ -24,7 +24,7 @@ export function Play({ book, search }: PlayProps) {
   const [drag, setDrag] = useState<number | null>(null)
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
-  const currentCue = useRef<HTMLButtonElement>(null)
+  const currentCue = useRef<HTMLParagraphElement>(null)
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -94,30 +94,32 @@ export function Play({ book, search }: PlayProps) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[calc(34rem+32px)] flex-col px-4 pt-[calc(env(safe-area-inset-top)+8px)] pb-[calc(env(safe-area-inset-bottom)+16px)] max-[680px]:pb-[calc(env(safe-area-inset-bottom)+8px)]">
-      <header className="grid grid-cols-[44px_1fr_44px] items-center gap-2 border-b-2 border-rule pb-2">
+      <header className="flex items-center justify-between gap-4 border-b-2 border-rule pb-2">
         <a className="grid h-11 w-11 place-items-center no-underline" href={`/book/${book.id}`} aria-label="Back to book">
           <BackIcon className="h-[22px] w-[22px]" />
         </a>
-        <button
-          type="button"
-          className={`min-h-11 p-0 text-center text-micro uppercase tracking-[0.12em] ${player.sleep ? 'font-medium text-ink' : 'text-muted'}`}
-          aria-label="Sleep timer"
-          onClick={() => setSleepOpen(true)}
-        >
-          {sleepLabel}
-        </button>
-        <button
-          type="button"
-          className="min-h-11 p-0 text-right text-micro uppercase tracking-[0.08em] text-muted"
-          aria-label={`Playback speed ${speedLabel}`}
-          title="Playback speed"
-          onClick={player.cycleSpeed}
-        >
-          {speedLabel}
-        </button>
+        <div className="flex items-baseline gap-4">
+          <button
+            type="button"
+            className={`min-h-11 p-0 text-micro uppercase tracking-[0.12em] ${player.sleep ? 'font-medium text-ink' : 'text-muted'}`}
+            aria-label="Sleep timer"
+            onClick={() => setSleepOpen(true)}
+          >
+            {sleepLabel}
+          </button>
+          <button
+            type="button"
+            className="min-h-11 p-0 text-micro uppercase tracking-[0.08em] text-muted"
+            aria-label={`Playback speed ${speedLabel}`}
+            title="Playback speed"
+            onClick={player.cycleSpeed}
+          >
+            {speedLabel}
+          </button>
+        </div>
       </header>
 
-      <div className="flex flex-1 flex-col justify-center pt-6">
+      <div className="play-stage relative flex min-h-0 flex-1 flex-col justify-center pt-6">
         <div
           className="relative cursor-pointer"
           role="button"
@@ -135,48 +137,49 @@ export function Play({ book, search }: PlayProps) {
               <Cover book={book} />
             </div>
             <div className="mt-6 text-center">
-              <h1 className={`mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em] ${chapter ? 'text-accent' : ''}`}>
+              <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">
                 {chapter?.title || book.title}
               </h1>
             </div>
           </div>
-          <div
-            className={`absolute inset-0 overflow-y-auto transition-opacity duration-200 ${
-              showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
-            }`}
-          >
-            {transcript ? (
-              <div onClick={(event) => event.stopPropagation()}>
-                <p className="micro">Transcription · Deutsch</p>
-                <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
-                <div className="transcript mt-5">
-                  {transcript.cues.map((cue, index) => (
-                    <button
-                      key={`${cue.start}-${index}`}
-                      ref={index === currentCueIndex ? currentCue : undefined}
-                      type="button"
-                      className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
-                      aria-current={index === currentCueIndex ? 'true' : undefined}
-                      onClick={() => player.seekTo(cue.start)}
-                    >
-                      {cue.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : transcriptLoading ? (
-              <p className="micro">Loading transcription…</p>
-            ) : (
-              <>
-                <p className="micro">From the book</p>
-                <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">{book.title}</h1>
-                <p className="mt-2 text-small text-muted">{book.authors.join(', ') || 'Unknown author'}</p>
-                <p className="mt-4 text-muted">{book.description || 'No description for this book.'}</p>
-                <p className="micro mt-4">Tap to return to the cover</p>
-              </>
-            )}
-          </div>
         </div>
+
+        <div
+          className={`play-text-overlay absolute inset-0 overflow-y-auto bg-paper transition-opacity duration-200 ${
+            showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+          onClick={() => setShowDescription(false)}
+        >
+          {transcript ? (
+            <div>
+              <p className="micro">Transcription · Deutsch</p>
+              <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
+              <div className="transcript mt-5">
+                {transcript.cues.map((cue, index) => (
+                  <p
+                    key={`${cue.start}-${index}`}
+                    ref={index === currentCueIndex ? currentCue : undefined}
+                    className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
+                    aria-current={index === currentCueIndex ? 'true' : undefined}
+                  >
+                    {cue.text}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : transcriptLoading ? (
+            <p className="micro">Loading transcription…</p>
+          ) : (
+            <>
+              <p className="micro">From the book</p>
+              <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">{book.title}</h1>
+              <p className="mt-2 text-small text-muted">{book.authors.join(', ') || 'Unknown author'}</p>
+              <p className="mt-4 text-muted">{book.description || 'No description for this book.'}</p>
+              <p className="micro mt-4">Tap to return to the cover</p>
+            </>
+          )}
+        </div>
+      </div>
 
         <button
           type="button"
@@ -250,7 +253,6 @@ export function Play({ book, search }: PlayProps) {
             <SeekIcon direction={1} />
           </TransportButton>
         </div>
-      </div>
 
       <Sheet open={chaptersOpen} onClose={() => setChaptersOpen(false)}>
         <header className="dialog-head">

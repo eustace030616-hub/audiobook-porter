@@ -748,3 +748,33 @@
   #book-chapter-list > li {
     scroll-margin-top: 88px;
   }
+
+  .book-chapters__head {
+    scroll-margin-top: 88px;
+  }
+
+  .book-chapters.is-open .book-chapters__head {
+    position: sticky;
+    top: calc(env(safe-area-inset-top) + 56px);
+    z-index: 7;
+    background: var(--paper);
+  }
+
+  .book-chapters.is-open .book-chapters__list {
+    max-height: calc(100dvh - 190px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .play-text-overlay {
+    padding: 8px 0 24px;
+    z-index: 2;
+  }
+
+  .transcript__cue {
+    margin: 0;
+  }
+
+  .book-chapters.is-open {
+    padding-bottom: 45dvh;
+  }
