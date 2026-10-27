@@ -953,7 +953,7 @@ function serveSubtitle(req, res, id, chapterParam) {
   const etag = `"sub-${stat.size}-${Math.round(stat.mtimeMs)}"`
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'private, max-age=3600',
+    'Cache-Control': 'no-store',
     'ETag': etag,
     'Last-Modified': stat.mtime.toUTCString(),
   }

@@ -1,4 +1,4 @@
-const VERSION = 'clam-v1'
+const VERSION = 'clam-v3'
 const CACHE = `clam-shell-${VERSION}`
 const SHELL = [
   '/',
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/audio/')) return
 
-  if (url.pathname === '/api/books' || url.pathname === '/__auth/me') {
+  if (url.pathname === '/api/books' || url.pathname === '/__auth/me' || url.pathname.startsWith('/subtitle/')) {
     event.respondWith(networkFirst(request))
     return
   }
@@ -70,7 +70,6 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/cover/') ||
-    url.pathname.startsWith('/subtitle/') ||
     url.pathname === '/favicon.svg' ||
     url.pathname === '/manifest.webmanifest' ||
     url.pathname === '/theme-init.js'
