@@ -6,7 +6,6 @@ import {
   type WordbookData,
   type WordLookup,
 } from '../lib/wordlookup'
-import { loadWordMarks, markKey, removeWordMark, saveWordMark } from '../lib/wordmarks'
 
 export interface WordSelection {
   surface: string
@@ -31,7 +30,6 @@ export function WordBanner({ selection }: WordBannerProps) {
   const [dictionary, setDictionary] = useState<Dictionary>({ status: 'loading', data: null })
   const [lookup, setLookup] = useState<WordLookup | null>(null)
   const [translation, setTranslation] = useState<Translation>({ status: 'idle' })
-  const [marked, setMarked] = useState(false)
   const surface = selection?.surface ?? ''
   const normalized = normalizeWord(surface)
 
@@ -82,37 +80,6 @@ export function WordBanner({ selection }: WordBannerProps) {
     return () => controller.abort()
   }, [dictionary.data, lookup, normalized, surface])
 
-  const key = markKey('de', lookup?.key ?? normalized)
-  useEffect(() => {
-    setMarked(loadWordMarks().some((mark) => mark.key === key))
-  }, [key])
-
-  function toggleMark() {
-    if (!selection) return
-    const lemma = lookup?.key ?? normalized
-    if (marked) {
-      removeWordMark(key)
-      setMarked(false)
-      return
-    }
-    saveWordMark({
-      key,
-      surface: selection.surface,
-      lemma,
-      gloss: entry?.shortGloss ?? translation.text ?? '',
-      article: entry?.article ?? null,
-      level: entry?.level ?? null,
-      bookId: selection.bookId,
-      bookTitle: selection.bookTitle,
-      chapterIndex: selection.chapterIndex,
-      chapterTitle: selection.chapterTitle,
-      cueStart: selection.cueStart,
-      sentence: selection.sentence,
-      createdAt: Date.now(),
-    })
-    setMarked(true)
-  }
-
   const original = entry
     ? [entry.article, entry.display ?? entry.key].filter(Boolean).join(' ')
     : selection?.surface ?? ''
@@ -127,15 +94,6 @@ export function WordBanner({ selection }: WordBannerProps) {
           <span className="word-banner__gloss">
             {pending ? '…' : gloss || (translation.status === 'error' ? 'no translation' : '')}
           </span>
-          <button
-            type="button"
-            className={`word-banner__mark${marked ? ' is-marked' : ''}`}
-            aria-label={marked ? 'Remove saved word' : 'Save word'}
-            aria-pressed={marked}
-            onClick={toggleMark}
-          >
-            {marked ? '★' : '☆'}
-          </button>
         </>
       ) : null}
     </div>

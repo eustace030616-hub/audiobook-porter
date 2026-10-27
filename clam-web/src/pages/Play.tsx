@@ -286,7 +286,7 @@ export function Play({ book, search }: PlayProps) {
         </div>
       </div>
 
-        <div className="mt-1">
+        <div className="mt-0">
           <div className="seek-wrap">
             <div className="seek-track" aria-hidden="true">
               <div className="seek-fill" style={{ width: `${percent}%` }} />

@@ -829,7 +829,7 @@
     align-items: center;
     min-height: 32px;
     gap: 12px;
-    border-top: 1px solid var(--muted);
+    border-top: 0;
     border-bottom: 1px solid var(--muted);
   }
 
@@ -861,23 +861,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .word-banner__mark {
-    min-width: 44px;
-    min-height: 32px;
-    margin: 0 -8px 0 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .word-banner__mark.is-marked {
-    color: var(--muted);
   }
 
   .transcript__top-space {
@@ -919,9 +902,9 @@
 
   .transcript-edge--bottom {
     bottom: 0;
-    height: 6px;
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
+    height: 10px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     background: linear-gradient(
       to top,
       var(--paper) 0%,
