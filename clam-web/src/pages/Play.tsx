@@ -32,7 +32,10 @@ const WordButtons = memo(function WordButtons({ segments, sentence, cueStart, on
         key={index}
         type="button"
         className="transcript__word"
-        onClick={() => onWord(part.text, sentence, cueStart)}
+        onClick={(event) => {
+          event.stopPropagation()
+          onWord(part.text, sentence, cueStart)
+        }}
       >
         {part.text}
       </button>
@@ -56,6 +59,7 @@ export function Play({ book, search }: PlayProps) {
   const [transcriptLoading, setTranscriptLoading] = useState(false)
   const [drag, setDrag] = useState<number | null>(null)
   const [word, setWord] = useState<WordSelection | null>(null)
+  const closeWord = useCallback(() => setWord(null), [])
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
   const currentCue = useRef<HTMLParagraphElement>(null)
@@ -129,6 +133,12 @@ export function Play({ book, search }: PlayProps) {
   }, [showDescription])
 
   useEffect(() => {
+    if (!word) return
+    const timer = window.setTimeout(() => setWord(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [word])
+
+  useEffect(() => {
     if (!showDescription || !transcript) return
     void loadWordbook().catch(() => undefined)
   }, [showDescription, transcript])
@@ -167,25 +177,14 @@ export function Play({ book, search }: PlayProps) {
         <a className="grid h-11 w-11 place-items-center no-underline" href={`/book/${book.id}`} aria-label="Back to book">
           <BackIcon className="h-[22px] w-[22px]" />
         </a>
-        <div className="flex items-baseline gap-4">
-          <button
-            type="button"
-            className={`min-h-11 p-0 text-micro uppercase tracking-[0.12em] ${player.sleep ? 'font-medium text-ink' : 'text-muted'}`}
-            aria-label="Sleep timer"
-            onClick={() => setSleepOpen(true)}
-          >
-            {sleepLabel}
-          </button>
-          <button
-            type="button"
-            className="min-h-11 p-0 text-micro uppercase tracking-[0.08em] text-muted"
-            aria-label={`Playback speed ${speedLabel}`}
-            title="Playback speed"
-            onClick={player.cycleSpeed}
-          >
-            {speedLabel}
-          </button>
-        </div>
+        <button
+          type="button"
+          className="min-h-11 whitespace-nowrap p-0 text-right text-micro uppercase tracking-[0.12em] text-muted"
+          onClick={() => setChaptersOpen(true)}
+          aria-label="Open chapter list"
+        >
+          {chapterLine}
+        </button>
       </header>
 
       <div className="play-stage relative flex min-h-0 flex-1 flex-col justify-center pt-6">
@@ -207,6 +206,9 @@ export function Play({ book, search }: PlayProps) {
           className={`play-text-overlay absolute inset-0 overflow-y-auto bg-paper transition-opacity duration-200 ${
             showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
+          onClick={() => {
+            if (word) setWord(null)
+          }}
         >
           {transcript ? (
             <div>
@@ -255,7 +257,7 @@ export function Play({ book, search }: PlayProps) {
             </>
           )}
         </div>
-        {word && showDescription ? <WordDropdown selection={word} /> : null}
+        {word && showDescription ? <WordDropdown selection={word} onClose={closeWord} /> : null}
       </div>
 
         <div className="mt-2 flex items-center justify-between gap-4">
@@ -267,14 +269,25 @@ export function Play({ book, search }: PlayProps) {
           >
             {textToggleLabel}
           </button>
-          <button
-            type="button"
-            className="min-h-8 p-0 text-right text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
-            onClick={() => setChaptersOpen(true)}
-            aria-label="Open chapter list"
-          >
-            {chapterLine}
-          </button>
+          <div className="flex items-baseline gap-4">
+            <button
+              type="button"
+              className={`min-h-8 p-0 text-micro uppercase tracking-[0.12em] ${player.sleep ? 'font-medium text-ink' : 'text-muted'}`}
+              aria-label="Sleep timer"
+              onClick={() => setSleepOpen(true)}
+            >
+              {sleepLabel}
+            </button>
+            <button
+              type="button"
+              className="min-h-8 p-0 text-micro uppercase tracking-[0.08em] text-muted"
+              aria-label={`Playback speed ${speedLabel}`}
+              title="Playback speed"
+              onClick={player.cycleSpeed}
+            >
+              {speedLabel}
+            </button>
+          </div>
         </div>
 
         <div className="mt-0">

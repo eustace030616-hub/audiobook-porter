@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   loadWordbook,
   lookupWord,
@@ -19,6 +19,7 @@ export interface WordSelection {
 
 interface WordBannerProps {
   selection: WordSelection | null
+  onClose: () => void
 }
 
 type Translation = { status: 'idle' | 'loading' | 'ready' | 'error'; text?: string; provider?: string }
@@ -26,7 +27,8 @@ type Dictionary = { status: 'loading' | 'ready' | 'error'; data: WordbookData | 
 
 const translationCache = new Map<string, { text: string; provider?: string }>()
 
-export function WordDropdown({ selection }: WordBannerProps) {
+export function WordDropdown({ selection, onClose }: WordBannerProps) {
+  const root = useRef<HTMLDivElement>(null)
   const [dictionary, setDictionary] = useState<Dictionary>({ status: 'loading', data: null })
   const [lookup, setLookup] = useState<WordLookup | null>(null)
   const [translation, setTranslation] = useState<Translation>({ status: 'idle' })
@@ -87,10 +89,21 @@ export function WordDropdown({ selection }: WordBannerProps) {
   const pending = dictionary.status === 'loading' || (lookup?.status === 'missing' && translation.status === 'loading')
   const meta = [entry?.pos, entry?.level].filter(Boolean).join(' · ')
 
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null
+      if (root.current?.contains(target)) return
+      if (target?.closest('.transcript__word, .transcript__time')) return
+      onClose()
+    }
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => document.removeEventListener('pointerdown', onPointerDown, true)
+  }, [onClose])
+
   if (!selection) return null
 
   return (
-    <div className="word-dropdown" role="status" aria-live="polite">
+    <div ref={root} className="word-dropdown" role="status" aria-live="polite">
       <div className="word-dropdown__head">
         <span className="word-dropdown__word">{original}</span>
         {meta ? <span className="word-dropdown__meta">{meta}</span> : null}
