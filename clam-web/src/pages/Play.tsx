@@ -259,7 +259,7 @@ export function Play({ book, search }: PlayProps) {
 
         <WordBanner selection={word} />
 
-        <div className="mt-4 flex items-center justify-between gap-4">
+        <div className="mt-2 flex items-center justify-between gap-4">
           <button
             type="button"
             className="min-h-11 p-0 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
@@ -278,7 +278,7 @@ export function Play({ book, search }: PlayProps) {
           </button>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <div className="seek-wrap">
             <div className="seek-track" aria-hidden="true">
               <div className="seek-fill" style={{ width: `${percent}%` }} />

@@ -32,3 +32,6 @@ the chapter row, with the chapter list at the right end.
 "Mitglieder": `das Mitglied` on the left, `member` on the right, and the
 saved-word star at the end. The banner is persistent and sits above the
 Transcript/Cover and chapter-list row.
+
+`transcript-banner-tight-390.png` is the tightened banner: transcript-sized
+word text, 8px to the Cover/Chapter row, and 16px below that row to the seek bar.
