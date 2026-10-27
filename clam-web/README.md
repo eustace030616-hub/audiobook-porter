@@ -198,9 +198,13 @@ The JSON shape is:
 }
 ```
 
-The generator aligns EPUB tokens to Whisper word timestamps, then uses the
-matched first/last word of each sentence as its cue. It does not display the
-Whisper text. Tiny/base ASR is only a clock; the EPUB is the transcript.
+The generator splits the EPUB into sentences first, aligns EPUB tokens to
+Whisper word timestamps, then uses the matched first/last word of each sentence
+as its cue. It does not display the Whisper text. Tiny/base ASR is only a
+clock; the EPUB is the transcript.
+
+The chapter-10 example currently has 565 sentence rows. Paragraph and dialogue
+boundaries are preserved; a single row never contains multiple sentences.
 
 In the Play screen, tapping the cover opens the transcript when the current
 chapter has a `subtitleUrl`. If it does not, the existing book description
