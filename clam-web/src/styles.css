@@ -891,3 +891,39 @@
     margin-top: 12px;
     transform: translateY(12px);
   }
+
+
+  .transcript-edge {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 24px;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+
+  .transcript-edge--top {
+    top: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 72%, transparent) 48%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
+  }
+
+  .transcript-edge--bottom {
+    bottom: 0;
+    background: linear-gradient(
+      to top,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 72%, transparent) 48%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
+  }

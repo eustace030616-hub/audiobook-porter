@@ -255,6 +255,12 @@ export function Play({ book, search }: PlayProps) {
             </>
           )}
         </div>
+        {showDescription ? (
+          <>
+            <div className="transcript-edge transcript-edge--top" aria-hidden="true" />
+            <div className="transcript-edge transcript-edge--bottom" aria-hidden="true" />
+          </>
+        ) : null}
       </div>
 
       <div className="play-lower">
