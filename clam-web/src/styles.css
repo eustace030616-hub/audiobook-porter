@@ -778,3 +778,38 @@
   .book-chapters.is-open {
     padding-bottom: 45dvh;
   }
+
+  .play-text-overlay {
+    padding-top: 24px;
+  }
+
+  .transcript__row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+
+  .transcript__time {
+    position: relative;
+    min-height: 24px;
+    padding: 2px 0 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.45;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .transcript__time::after {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+
+  .transcript__time:hover {
+    color: var(--ink);
+  }

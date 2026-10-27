@@ -9,6 +9,11 @@ import { CacheButton } from '../components/CacheButton'
 import { BackIcon, PauseIcon, PlayIcon, SeekIcon } from '../components/Icons'
 import { TransportButton } from '../components/TransportButton'
 
+function shortTime(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds))
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
 interface PlayProps {
   book: BookType
   search: URLSearchParams
@@ -156,14 +161,26 @@ export function Play({ book, search }: PlayProps) {
               <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
               <div className="transcript mt-5">
                 {transcript.cues.map((cue, index) => (
-                  <p
-                    key={`${cue.start}-${index}`}
-                    ref={index === currentCueIndex ? currentCue : undefined}
-                    className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
-                    aria-current={index === currentCueIndex ? 'true' : undefined}
-                  >
-                    {cue.text}
-                  </p>
+                  <div key={`${cue.start}-${index}`} className="transcript__row">
+                    <button
+                      type="button"
+                      className="transcript__time"
+                      aria-label={`Jump to ${shortTime(cue.start)}`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        player.seekTo(cue.start)
+                      }}
+                    >
+                      {shortTime(cue.start)}
+                    </button>
+                    <p
+                      ref={index === currentCueIndex ? currentCue : undefined}
+                      className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
+                      aria-current={index === currentCueIndex ? 'true' : undefined}
+                    >
+                      {cue.text}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
