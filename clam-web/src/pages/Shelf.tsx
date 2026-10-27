@@ -3,6 +3,7 @@ import type { Book, Library, Shelf as ShelfType } from '../types'
 import { api } from '../api'
 import { navigate } from '../lib/router'
 import { useChapterCache } from '../chapter-cache'
+import { usePlayer } from '../player'
 import { bookPercent } from '../lib/progress'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -28,6 +29,7 @@ function shelfLayout(shelves: ShelfType[]): { shelves: string[]; books: Record<s
 
 export function Shelf({ library, onLibrary, reload }: ShelfProps) {
   const cache = useChapterCache()
+  const player = usePlayer()
   const [shelves, setShelves] = useState(library.shelves)
   const [arranging, setArranging] = useState(false)
   const [bookEditor, setBookEditor] = useState<Book | null>(null)
@@ -35,8 +37,24 @@ export function Shelf({ library, onLibrary, reload }: ShelfProps) {
   const [error, setError] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const flip = useRef<Map<string, DOMRect> | null>(null)
+  let lastId = ''
+  try { lastId = localStorage.getItem('shelf:last') || '' } catch { /* ignore */ }
+  const activeId = player.book?.id || lastId
 
   useEffect(() => setShelves(library.shelves), [library])
+
+  useEffect(() => {
+    if (arranging || !activeId) return
+    const frame = window.requestAnimationFrame(() => {
+      const card = container.current?.querySelector<HTMLElement>(`[data-book-id="${activeId}"]`)
+      const rail = card?.closest<HTMLElement>('.shelf-rail')
+      if (!card || !rail) return
+      const cardRect = card.getBoundingClientRect()
+      const railRect = rail.getBoundingClientRect()
+      rail.scrollLeft += cardRect.left + cardRect.width / 2 - (railRect.left + railRect.width / 2)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeId, arranging, shelves])
 
   const capture = () => {
     const map = new Map<string, DOMRect>()

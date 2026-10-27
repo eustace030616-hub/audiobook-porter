@@ -298,11 +298,15 @@
 
   @media (max-width: 680px) {
     .shelf-rail {
+      --shelf-card: calc((100vw - 64px) / 1.5);
       gap: 16px;
+      padding-inline: calc((100vw - 32px - var(--shelf-card)) / 2);
+      scroll-snap-type: x mandatory;
     }
 
     .shelf-rail > * {
-      flex-basis: 64vw;
+      flex-basis: var(--shelf-card);
+      scroll-snap-align: center;
     }
   }
 
