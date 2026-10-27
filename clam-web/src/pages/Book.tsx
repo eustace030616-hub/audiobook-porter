@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Book as BookType } from '../types'
 import { clock } from '../lib/progress'
 import { navigate } from '../lib/router'
@@ -12,12 +12,48 @@ interface BookProps {
 
 export function Book({ book }: BookProps) {
   const player = usePlayer()
+  const [descriptionOpen, setDescriptionOpen] = useState(false)
+  const [descriptionCanExpand, setDescriptionCanExpand] = useState(false)
+  const [chaptersOpen, setChaptersOpen] = useState(false)
+  const description = useRef<HTMLButtonElement>(null)
+  const chapterAnchor = useRef<HTMLLIElement>(null)
 
   useEffect(() => {
     if (!player.book) void player.prepare(book, { restore: true })
     // Prime the mini player for the book page, exactly as the old client did.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book.id])
+
+  useEffect(() => {
+    setDescriptionOpen(false)
+    setChaptersOpen(false)
+  }, [book.id])
+
+  useEffect(() => {
+    if (descriptionOpen) return
+    const element = description.current
+    if (!element) return
+    const measure = () => setDescriptionCanExpand(element.scrollHeight > element.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [book.description, descriptionOpen])
+
+  const currentIndex = player.book?.id === book.id ? Math.max(0, Math.min(book.chapters.length - 1, player.chapter)) : -1
+  const anchorIndex = currentIndex >= 0 ? currentIndex : 0
+  const folded = currentIndex >= 0
+    ? [currentIndex - 1, currentIndex, currentIndex + 1].filter((index) => index >= 0 && index < book.chapters.length)
+    : [0]
+  const chapterIndices = chaptersOpen ? book.chapters.map((_, index) => index) : folded
+
+  useEffect(() => {
+    if (!chaptersOpen) return
+    const frame = window.requestAnimationFrame(() => {
+      chapterAnchor.current?.scrollIntoView({ block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [chaptersOpen, currentIndex, book.id])
 
   return (
     <main className="mx-auto max-w-[calc(72rem+32px)] px-4 pt-8 pb-8">
@@ -38,33 +74,76 @@ export function Book({ book }: BookProps) {
             {book.authors.join(', ') || 'Unknown author'}
             {book.narrator ? ` · read by ${book.narrator}` : ''}
           </p>
-          {book.description ? <p className="mt-6 max-w-[58ch] text-muted">{book.description}</p> : null}
+          {book.description ? (
+            <div className="book-description mt-6">
+              <button
+                ref={description}
+                type="button"
+                className={`book-description__text${descriptionOpen ? '' : ' is-clamped'}`}
+                aria-expanded={descriptionCanExpand ? descriptionOpen : undefined}
+                onClick={() => {
+                  if (descriptionCanExpand) setDescriptionOpen((value) => !value)
+                }}
+              >
+                {book.description}
+              </button>
+              {descriptionCanExpand ? (
+                <button
+                  type="button"
+                  className="book-description__more"
+                  aria-expanded={descriptionOpen}
+                  onClick={() => setDescriptionOpen((value) => !value)}
+                >
+                  {descriptionOpen ? 'Show less' : '…'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           <section className="mt-10">
             <div className="flex items-baseline justify-between gap-4 pb-4">
-              <h2 className="text-[clamp(20px,3vw,28px)] font-medium leading-[1.05] tracking-[-0.025em]">Chapters</h2>
+              <button
+                type="button"
+                className="chapter-toggle flex min-h-11 items-baseline gap-3 text-left"
+                aria-expanded={chaptersOpen}
+                aria-controls="book-chapter-list"
+                onClick={() => setChaptersOpen((value) => !value)}
+              >
+                <h2 className="text-[clamp(20px,3vw,28px)] font-medium leading-[1.05] tracking-[-0.025em]">Chapters</h2>
+                <span className="text-[clamp(20px,3vw,28px)] font-normal leading-none text-muted" aria-hidden="true">
+                  {chaptersOpen ? '−' : '+'}
+                </span>
+              </button>
               <p className="micro">{book.chapters.length || 0}</p>
             </div>
             {book.chapters.length ? (
-              <ol className="border-t border-hair">
-                {book.chapters.map((chapter, index) => (
-                  <li key={index} className="chapter-row border-b border-hair">
-                    <button
-                      type="button"
-                      className="chapter-main grid min-h-11 w-full grid-cols-[3rem_1fr_auto] items-center gap-4 bg-transparent py-2 text-left text-ink hover:bg-surface-2"
-                      aria-current={player.book?.id === book.id && index === player.chapter ? 'true' : undefined}
-                      onClick={() => {
-                        void player.prepare(book, { chapterIndex: index, restore: false, autoplay: true })
-                        navigate(`/play/${book.id}?chapter=${index + 1}&autoplay=1`)
-                      }}
+              <ol id="book-chapter-list" className="border-t border-hair">
+                {chapterIndices.map((index) => {
+                  const chapter = book.chapters[index]
+                  const isCurrent = currentIndex === index
+                  return (
+                    <li
+                      key={index}
+                      ref={index === anchorIndex ? chapterAnchor : undefined}
+                      className="chapter-row border-b border-hair"
                     >
-                      <span className="text-micro text-muted">{String(index + 1).padStart(2, '0')}</span>
-                      <span className="chapter-title text-body">{chapter.title}</span>
-                      <span className="text-micro text-muted tabular-nums">{clock(chapter.start / 1000)}</span>
-                    </button>
-                    <CacheButton book={book} index={index} />
-                  </li>
-                ))}
+                      <button
+                        type="button"
+                        className="chapter-main grid min-h-11 w-full grid-cols-[3rem_1fr_auto] items-center gap-4 bg-transparent py-2 text-left text-ink hover:bg-surface-2"
+                        aria-current={isCurrent ? 'true' : undefined}
+                        onClick={() => {
+                          void player.prepare(book, { chapterIndex: index, restore: false, autoplay: true })
+                          navigate(`/play/${book.id}?chapter=${index + 1}&autoplay=1`)
+                        }}
+                      >
+                        <span className="text-micro text-muted">{String(index + 1).padStart(2, '0')}</span>
+                        <span className="chapter-title text-body">{chapter.title}</span>
+                        <span className="text-micro text-muted tabular-nums">{clock(chapter.start / 1000)}</span>
+                      </button>
+                      <CacheButton book={book} index={index} />
+                    </li>
+                  )
+                })}
               </ol>
             ) : (
               <p className="text-muted">No chapters.</p>
