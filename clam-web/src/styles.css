@@ -829,8 +829,8 @@
     align-items: center;
     min-height: 32px;
     gap: 12px;
-    border-top: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
+    border-top: 1px solid var(--muted);
+    border-bottom: 1px solid var(--muted);
   }
 
   .word-banner__word {
@@ -890,7 +890,7 @@
 
 
   .play-lower {
-    margin-top: 12px;
+    margin-top: 0;
     transform: translateY(12px);
   }
 
@@ -920,7 +920,9 @@
 
   .transcript-edge--bottom {
     bottom: 0;
-    height: 4px;
+    height: 8px;
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
     background: linear-gradient(
       to top,
       var(--paper) 0%,
