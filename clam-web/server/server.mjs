@@ -196,7 +196,7 @@ function serveStatic(req, res, url) {
   if (pathname === '/__auth/login' && req.method === 'POST') return login(req, res)
   if (pathname === '/__auth/logout' && req.method === 'POST') return logout(req, res)
 
-  if (pathname.startsWith('/api/') || pathname.startsWith('/audio/') || pathname.startsWith('/cover/')) {
+  if (pathname.startsWith('/api/') || pathname.startsWith('/audio/') || pathname.startsWith('/cover/') || pathname.startsWith('/subtitle/')) {
     return proxy(req, res, url)
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {

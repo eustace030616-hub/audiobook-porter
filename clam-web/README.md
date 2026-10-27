@@ -173,3 +173,37 @@ A paused download keeps its reader and chunks in memory and resumes from the
 same offset. The cache page at `/cache` groups downloaded chapters by book,
 shows their sizes and removes individual entries. The Shelf `Cache` button opens
 it beside `Arrange`.
+
+
+## Chapter transcription
+
+Chapter 10 of *Harry Potter und der Orden des Phönix* is the first transcript
+example. The displayed text comes from the German EPUB; only the timeline comes
+from speech recognition.
+
+```
+subtitles/10.json         EPUB sentences with chapter-relative start/end
+metadata.json             chapters[9].subtitle_file = "subtitles/10.json"
+/subtitle/:book/:chapter  authenticated JSON route
+```
+
+The JSON shape is:
+
+```json
+{
+  "language": "de",
+  "cues": [
+    { "start": 6.6, "end": 9.46, "text": "Dumbledores abruptes Verschwinden …" }
+  ]
+}
+```
+
+The generator aligns EPUB tokens to Whisper word timestamps, then uses the
+matched first/last word of each sentence as its cue. It does not display the
+Whisper text. Tiny/base ASR is only a clock; the EPUB is the transcript.
+
+In the Play screen, tapping the cover opens the transcript when the current
+chapter has a `subtitleUrl`. If it does not, the existing book description
+placeholder is shown. Cues are chapter-relative so they work with the continuous
+`book.m4b`; tapping a cue seeks the player. The service worker caches
+`/subtitle/` for offline use.

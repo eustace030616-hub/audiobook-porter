@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Book as BookType } from '../types'
 import { chapterFor, clock, savedProgress } from '../lib/progress'
+import { cueAt, loadTranscript, type Transcript } from '../lib/subtitles'
 import { usePlayer } from '../player'
 import { Cover } from '../components/Cover'
 import { Sheet } from '../components/Sheet'
@@ -18,9 +19,12 @@ export function Play({ book, search }: PlayProps) {
   const [showDescription, setShowDescription] = useState(false)
   const [chaptersOpen, setChaptersOpen] = useState(false)
   const [sleepOpen, setSleepOpen] = useState(false)
+  const [transcript, setTranscript] = useState<Transcript | null>(null)
+  const [transcriptLoading, setTranscriptLoading] = useState(false)
   const [drag, setDrag] = useState<number | null>(null)
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
+  const currentCue = useRef<HTMLButtonElement>(null)
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -51,6 +55,27 @@ export function Play({ book, search }: PlayProps) {
   const shown = drag ?? current
   const percent = duration ? Math.min(100, (shown / duration) * 100) : 0
   const chapterLine = book.chapters.length ? `Chapter ${chapterIndex + 1} of ${book.chapters.length}` : book.title
+  const currentCueIndex = transcript ? cueAt(transcript.cues, current) : -1
+
+  useEffect(() => {
+    setTranscript(null)
+    setTranscriptLoading(false)
+    const url = chapter?.subtitleUrl
+    if (!url) return
+    let alive = true
+    setTranscriptLoading(true)
+    void loadTranscript(url).then((value) => {
+      if (!alive) return
+      setTranscript(value)
+      setTranscriptLoading(false)
+    })
+    return () => { alive = false }
+  }, [chapter?.subtitleUrl])
+
+  useEffect(() => {
+    if (!showDescription || !transcript) return
+    currentCue.current?.scrollIntoView({ block: 'center' })
+  }, [showDescription, transcript, currentCueIndex])
   const speedLabel = player.speed === 1 ? '1×' : `${player.speed}×`
   const sleepSeconds = Math.max(0, Math.ceil(player.sleepRemaining || 0))
   const sleepLabel = !player.sleep
@@ -97,7 +122,7 @@ export function Play({ book, search }: PlayProps) {
           className="relative cursor-pointer"
           role="button"
           tabIndex={0}
-          aria-label={showDescription ? 'Show cover' : 'Show book description'}
+          aria-label={showDescription ? 'Show cover' : chapter?.subtitleUrl ? 'Show transcription' : 'Show book description'}
           onClick={() => setShowDescription((value) => !value)}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return
@@ -120,11 +145,36 @@ export function Play({ book, search }: PlayProps) {
               showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
           >
-            <p className="micro">From the book</p>
-            <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">{book.title}</h1>
-            <p className="mt-2 text-small text-muted">{book.authors.join(', ') || 'Unknown author'}</p>
-            <p className="mt-4 text-muted">{book.description || 'No description for this book.'}</p>
-            <p className="micro mt-4">Tap to return to the cover</p>
+            {transcript ? (
+              <div onClick={(event) => event.stopPropagation()}>
+                <p className="micro">Transcription · Deutsch</p>
+                <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
+                <div className="transcript mt-5">
+                  {transcript.cues.map((cue, index) => (
+                    <button
+                      key={`${cue.start}-${index}`}
+                      ref={index === currentCueIndex ? currentCue : undefined}
+                      type="button"
+                      className={`transcript__cue${index === currentCueIndex ? ' is-current' : ''}`}
+                      aria-current={index === currentCueIndex ? 'true' : undefined}
+                      onClick={() => player.seekTo(cue.start)}
+                    >
+                      {cue.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : transcriptLoading ? (
+              <p className="micro">Loading transcription…</p>
+            ) : (
+              <>
+                <p className="micro">From the book</p>
+                <h1 className="mt-2 text-[clamp(24px,6.5vw,32px)] font-medium leading-[1.02] tracking-[-0.035em]">{book.title}</h1>
+                <p className="mt-2 text-small text-muted">{book.authors.join(', ') || 'Unknown author'}</p>
+                <p className="mt-4 text-muted">{book.description || 'No description for this book.'}</p>
+                <p className="micro mt-4">Tap to return to the cover</p>
+              </>
+            )}
           </div>
         </div>
 

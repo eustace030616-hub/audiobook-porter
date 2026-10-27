@@ -457,6 +457,14 @@ function loadBooks() {
         if (!candidate.startsWith(`${dir}${path.sep}`)) continue
         let stat
         try { stat = fs.statSync(candidate) } catch { continue }
+        let subtitleFile = null
+        const subtitleName = cleanName(chapter.subtitle_file)
+        if (subtitleName) {
+          const subtitleCandidate = path.resolve(dir, subtitleName)
+          if (subtitleCandidate.startsWith(`${dir}${path.sep}`) && fs.existsSync(subtitleCandidate)) {
+            subtitleFile = subtitleCandidate
+          }
+        }
         chapters.push({
           index,
           title: cleanName(chapter.title) || `Chapter ${index + 1}`,
@@ -465,6 +473,7 @@ function loadBooks() {
           duration: Math.max(0, Number(chapter.duration_ms) || 0) / 1000,
           file: candidate,
           fileVersion: Math.round(stat.mtimeMs),
+          subtitleFile,
         })
         audioVersion = Math.max(audioVersion, Math.round(stat.mtimeMs))
       }
@@ -629,6 +638,7 @@ function publicBook(book) {
       end: chapter.end,
       duration: chapter.duration,
       fileVersion: chapter.fileVersion || 0,
+      subtitleUrl: chapter.subtitleFile ? `/subtitle/${book.id}/${chapter.index}` : '',
     })),
     duration: book.duration,
     durationLabel: book.durationLabel,
@@ -928,6 +938,32 @@ function audioMime(file) {
   return 'application/octet-stream'
 }
 
+function serveSubtitle(req, res, id, chapterParam) {
+  const book = bookById(id)
+  if (!book) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  const chapter = Number(chapterParam)
+  if (!Number.isInteger(chapter) || chapter < 0 || chapter >= book.chapters.length) {
+    return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  }
+  const file = book.chapters[chapter].subtitleFile
+  if (!file) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  let stat
+  try { stat = fs.statSync(file) } catch { return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' }) }
+  const etag = `"sub-${stat.size}-${Math.round(stat.mtimeMs)}"`
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'private, max-age=3600',
+    'ETag': etag,
+    'Last-Modified': stat.mtime.toUTCString(),
+  }
+  if (req.method === 'HEAD') {
+    res.writeHead(200, { ...headers, 'Content-Length': stat.size })
+    return res.end()
+  }
+  res.writeHead(200, { ...headers, 'Content-Length': stat.size })
+  fs.createReadStream(file).pipe(res)
+}
+
 function serveAudio(req, res, id, chapterParam) {
   const book = bookById(id)
   if (!book) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
@@ -1224,6 +1260,13 @@ const server = http.createServer(async (req, res) => {
   if (/^\/cover\/[a-f0-9]{12}$/.test(pathname)) {
     if (!requireAuth(req, res)) return
     return serveCover(req, res, pathname.split('/')[2])
+  }
+
+  if (pathname.startsWith('/subtitle/')) {
+    if (!requireAuth(req, res)) return
+    const parts = pathname.slice('/subtitle/'.length).split('/')
+    if (parts.length !== 2 || !parts[0]) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+    return serveSubtitle(req, res, parts[0], parts[1])
   }
 
   if (pathname.startsWith('/audio/')) {

@@ -672,3 +672,25 @@
   .cache-dialog__body {
     padding: 24px 16px calc(env(safe-area-inset-bottom) + 24px);
   }
+
+  .transcript {
+    padding-bottom: 24px;
+    border-top: 1px solid var(--hair);
+  }
+
+  .transcript__cue {
+    display: block;
+    width: 100%;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.45;
+    text-align: left;
+  }
+
+  .transcript__cue.is-current {
+    color: var(--accent);
+    font-weight: 500;
+  }

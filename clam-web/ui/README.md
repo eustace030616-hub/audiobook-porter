@@ -23,3 +23,7 @@ shows the active 15-minute countdown.
 Sleep fade and Media Session are behaviour-only captures: the fade is the last
 20 seconds of the sleep timer / chapter, and Media Session updates chapter
 metadata, position and previous/next actions from the same player state.
+
+`transcript-390-after.png` is HP5 chapter 10 with EPUB text and an ASR-derived
+timeline; `transcript-fallback-390-after.png` is a chapter without a subtitle
+file, showing the normal book-description placeholder.

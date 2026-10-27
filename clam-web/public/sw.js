@@ -70,6 +70,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/cover/') ||
+    url.pathname.startsWith('/subtitle/') ||
     url.pathname === '/favicon.svg' ||
     url.pathname === '/manifest.webmanifest' ||
     url.pathname === '/theme-init.js'

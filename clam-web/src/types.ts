@@ -5,6 +5,7 @@ export interface Chapter {
   end: number
   duration: number
   fileVersion: number
+  subtitleUrl?: string
 }
 
 export interface Book {
