@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { api, ApiError } from './api'
 import type { Library, Stats, Theme } from './types'
 import { applyTheme, readThemePreference, resolveTheme, saveThemePreference, type ThemePreference } from './lib/theme'
-import { navigate, parseRoute, useLinkHandler, useLocation, type Route } from './lib/router'
+import { navigate, parseRoute, useLinkHandler, useLocation } from './lib/router'
 import { todayKey } from './lib/progress'
 import { PlayerProvider, usePlayer } from './player'
 import { ChapterCacheProvider } from './chapter-cache'
@@ -18,14 +18,6 @@ import { Play } from './pages/Play'
 import { NotFound } from './pages/NotFound'
 
 type AuthState = 'checking' | 'signedIn' | 'signedOut'
-
-function backTargetFor(route: Route): string | null {
-  if (route.kind === 'play') return `/book/${route.id}`
-  if (route.kind === 'book') return '/shelf'
-  if (route.kind === 'cache') return '/shelf'
-  if (route.kind === 'shelf') return '/'
-  return null
-}
 
 interface SignedInProps {
   path: string
@@ -57,41 +49,6 @@ function SignedInApp({
   const route = parseRoute(path)
   const isPlay = route.kind === 'play'
   const player = usePlayer()
-  const backTarget = useRef<string | null>(null)
-  const currentPath = useRef(path)
-  const guardArmed = useRef(false)
-
-  useEffect(() => {
-    currentPath.current = path
-    const target = backTargetFor(route)
-    backTarget.current = target
-    if (!target) {
-      guardArmed.current = false
-      return
-    }
-    if (window.history.state?.clamGuard === true) {
-      guardArmed.current = true
-      return
-    }
-    window.history.pushState({ ...(window.history.state || {}), clamGuard: true }, '', window.location.href)
-    guardArmed.current = true
-  }, [path])
-
-  useEffect(() => {
-    function onPopState(event: PopStateEvent) {
-      if (!guardArmed.current) return
-      guardArmed.current = false
-      const target = backTarget.current
-      if (!target) return
-      // Keep the native swipe on a duplicate of the current URL, then run the
-      // page's own back action instead of letting browser history decide.
-      event.stopImmediatePropagation()
-      window.history.pushState({ ...(window.history.state || {}), clamGuard: false }, '', currentPath.current)
-      navigate(target)
-    }
-    window.addEventListener('popstate', onPopState, true)
-    return () => window.removeEventListener('popstate', onPopState, true)
-  }, [])
 
   useEffect(() => {
     if (path !== '/' && path !== '/shelf') return
