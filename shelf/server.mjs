@@ -474,6 +474,7 @@ function loadBooks() {
           file: candidate,
           fileVersion: Math.round(stat.mtimeMs),
           subtitleFile,
+          subtitleVersion: subtitleFile ? Math.round(fs.statSync(subtitleFile).mtimeMs) : 0,
         })
         audioVersion = Math.max(audioVersion, Math.round(stat.mtimeMs))
       }
@@ -638,7 +639,7 @@ function publicBook(book) {
       end: chapter.end,
       duration: chapter.duration,
       fileVersion: chapter.fileVersion || 0,
-      subtitleUrl: chapter.subtitleFile ? `/subtitle/${book.id}/${chapter.index}` : '',
+      subtitleUrl: chapter.subtitleFile ? `/subtitle/${book.id}/${chapter.index}?v=${chapter.subtitleVersion || 0}` : '',
     })),
     duration: book.duration,
     durationLabel: book.durationLabel,
