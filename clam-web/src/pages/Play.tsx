@@ -30,6 +30,7 @@ export function Play({ book, search }: PlayProps) {
   const seekTimer = useRef<number | null>(null)
   const dialogList = useRef<HTMLDivElement>(null)
   const currentCue = useRef<HTMLParagraphElement>(null)
+  const textOverlay = useRef<HTMLDivElement>(null)
 
   const chapterParam = Number(search.get('chapter'))
   const autoplay = search.get('autoplay') === '1'
@@ -79,7 +80,14 @@ export function Play({ book, search }: PlayProps) {
 
   useEffect(() => {
     if (!showDescription || !transcript) return
-    currentCue.current?.scrollIntoView({ block: 'center' })
+    const overlay = textOverlay.current
+    const cue = currentCue.current
+    if (!overlay || !cue) return
+    const frame = window.requestAnimationFrame(() => {
+      const cueTop = cue.getBoundingClientRect().top - overlay.getBoundingClientRect().top + overlay.scrollTop
+      overlay.scrollTop = Math.max(0, cueTop - overlay.clientHeight * 0.7)
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [showDescription, transcript, currentCueIndex])
   const speedLabel = player.speed === 1 ? '1×' : `${player.speed}×`
   const sleepSeconds = Math.max(0, Math.ceil(player.sleepRemaining || 0))
@@ -88,6 +96,7 @@ export function Play({ book, search }: PlayProps) {
     : player.sleep.kind === 'chapter'
       ? 'End chapter'
       : `${Math.floor(sleepSeconds / 60)}:${String(sleepSeconds % 60).padStart(2, '0')}`
+  const textToggleLabel = showDescription ? 'Cover' : chapter?.subtitleUrl ? 'Transcript' : 'Description'
 
   function setSeeking(value: boolean) {
     player.setSeeking(value)
@@ -125,18 +134,7 @@ export function Play({ book, search }: PlayProps) {
       </header>
 
       <div className="play-stage relative flex min-h-0 flex-1 flex-col justify-center pt-6">
-        <div
-          className="relative cursor-pointer"
-          role="button"
-          tabIndex={0}
-          aria-label={showDescription ? 'Show cover' : chapter?.subtitleUrl ? 'Show transcription' : 'Show book description'}
-          onClick={() => setShowDescription((value) => !value)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            setShowDescription((value) => !value)
-          }}
-        >
+        <div>
           <div className={`transition-opacity duration-200 ${showDescription ? 'invisible' : ''}`}>
             <div className="mx-auto w-[min(68vw,280px)] max-[680px]:w-[min(68vw,260px)]">
               <Cover book={book} />
@@ -150,10 +148,10 @@ export function Play({ book, search }: PlayProps) {
         </div>
 
         <div
+          ref={textOverlay}
           className={`play-text-overlay absolute inset-0 overflow-y-auto bg-paper transition-opacity duration-200 ${
             showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
-          onClick={() => setShowDescription(false)}
         >
           {transcript ? (
             <div>
@@ -198,14 +196,24 @@ export function Play({ book, search }: PlayProps) {
         </div>
       </div>
 
-        <button
-          type="button"
-          className="micro mx-auto mt-2 block min-h-11 p-0 text-center uppercase tracking-[0.12em] underline underline-offset-[3px]"
-          onClick={() => setChaptersOpen(true)}
-          aria-label="Open chapter list"
-        >
-          {chapterLine}
-        </button>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <button
+            type="button"
+            className="min-h-11 p-0 text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+            aria-label={showDescription ? 'Show cover' : `Show ${textToggleLabel.toLowerCase()}`}
+            onClick={() => setShowDescription((value) => !value)}
+          >
+            {textToggleLabel}
+          </button>
+          <button
+            type="button"
+            className="min-h-11 p-0 text-right text-micro uppercase tracking-[0.12em] text-muted underline underline-offset-[3px]"
+            onClick={() => setChaptersOpen(true)}
+            aria-label="Open chapter list"
+          >
+            {chapterLine}
+          </button>
+        </div>
 
         <div className="mt-8">
           <div className="seek-wrap">

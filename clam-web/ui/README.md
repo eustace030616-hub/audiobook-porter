@@ -20,4 +20,7 @@ paper/transcript-fallback-390-after.png
 night/transcript-390-after.png
 ```
 
-The current transcript sentence is ink; surrounding rows are muted grey.
+The current transcript sentence is ink and is anchored around 70% of the
+visible transcript height. Each row has a small timestamp button at the left;
+only that button seeks. The `Transcript` / `Cover` control is at the left end of
+the chapter row, with the chapter list at the right end.

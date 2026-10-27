@@ -206,8 +206,9 @@ clock; the EPUB is the transcript.
 The chapter-10 example currently has 565 sentence rows. Paragraph and dialogue
 boundaries are preserved; a single row never contains multiple sentences.
 
-In the Play screen, tapping the cover opens the transcript when the current
-chapter has a `subtitleUrl`. If it does not, the existing book description
-placeholder is shown. Cues are chapter-relative so they work with the continuous
+In the Play screen, the `Transcript` / `Cover` button at the left end of the
+chapter row switches the stage. Tapping the cover is no longer a control. If
+the current chapter has no `subtitleUrl`, the button says `Description` and opens
+the existing description placeholder. Cues are chapter-relative so they work with the continuous
 `book.m4b`; tapping a cue seeks the player. The service worker caches
 `/subtitle/` for offline use.
