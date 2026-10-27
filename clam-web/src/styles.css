@@ -879,22 +879,22 @@
   @keyframes word-drop {
     from {
       opacity: 0;
-      transform: translateY(-8px);
+      clip-path: inset(0 0 100% 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      clip-path: inset(0 0 0 0);
     }
   }
 
   @keyframes word-drop-out {
     from {
       opacity: 1;
-      transform: translateY(0);
+      clip-path: inset(0 0 0 0);
     }
     to {
       opacity: 0;
-      transform: translateY(-8px);
+      clip-path: inset(0 0 100% 0);
     }
   }
 
