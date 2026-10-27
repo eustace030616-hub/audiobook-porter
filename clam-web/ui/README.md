@@ -14,6 +14,8 @@ paper/cache-prompt-390-after.png
 paper/account-390-after.png     Auto style control
 ```
 
+The current transcript sentence is ink; surrounding rows are muted grey.
+
 The new sleep, speed and cache-management surfaces have no earlier equivalent;
 the Book pair is the direct before/after for the logo and chapter states.
 

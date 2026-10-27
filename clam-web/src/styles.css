@@ -691,6 +691,6 @@
   }
 
   .transcript__cue.is-current {
-    color: var(--accent);
+    color: var(--ink);
     font-weight: 500;
   }
