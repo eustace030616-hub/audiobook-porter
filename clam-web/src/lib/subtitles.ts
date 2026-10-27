@@ -60,3 +60,47 @@ export function cueAt(cues: SubtitleCue[], time: number): number {
   }
   return found
 }
+
+
+export interface TranscriptBlock {
+  start: number
+  end: number
+  text: string
+  firstCue: number
+  lastCue: number
+}
+
+/**
+ * Audio transcripts read badly as one sentence per row. Keep the sentence
+ * timings for seeking, but render two or three sentences as one block.
+ */
+export function groupCues(cues: SubtitleCue[]): TranscriptBlock[] {
+  if (!cues.length) return []
+  const sizes: number[] = []
+  let left = cues.length
+  let cursor = 0
+  while (left > 0) {
+    let size = Math.min(3, left)
+    if (left === 4) size = 2
+    if (left > 3) {
+      const chars = cues.slice(cursor, cursor + 3).reduce((sum, cue) => sum + cue.text.length, 0)
+      if (chars > 650) size = 2
+    }
+    sizes.push(size)
+    left -= size
+    cursor += size
+  }
+  let cueIndex = 0
+  return sizes.map((size) => {
+    const slice = cues.slice(cueIndex, cueIndex + size)
+    const block: TranscriptBlock = {
+      start: slice[0].start,
+      end: slice[slice.length - 1].end,
+      text: slice.map((cue) => cue.text).join(' '),
+      firstCue: cueIndex,
+      lastCue: cueIndex + size - 1,
+    }
+    cueIndex += size
+    return block
+  })
+}

@@ -678,7 +678,7 @@
     border-top: 1px solid var(--hair);
   }
 
-  .transcript__cue {
+  .transcript__block {
     display: block;
     width: 100%;
     padding: 8px 0;
@@ -690,7 +690,11 @@
     text-align: left;
   }
 
-  .transcript__cue.is-current {
+  .transcript__block + .transcript__block {
+    margin-top: 8px;
+  }
+
+  .transcript__block.is-current {
     color: var(--accent);
     font-weight: 500;
   }
