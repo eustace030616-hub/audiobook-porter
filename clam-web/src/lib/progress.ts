@@ -70,7 +70,6 @@ export function savedProgress(book: Book): SavedProgress {
     updated: Number(book.positionUpdated) || 0,
   }
   if (!local) return server
-  if (local.position > 0 && server.position === 0) return local
   if (!server.updated) return local
   return local.updated >= server.updated ? local : server
 }

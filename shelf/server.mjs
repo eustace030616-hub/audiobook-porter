@@ -186,6 +186,7 @@ function progressData() {
 
 function saveProgress(id, position, updated, chapter = 0) {
   const data = progressData()
+  if (Number(data[id]?.updated) >= updated) return
   data[id] = { chapter, position, updated }
   const tmp = `${PROGRESS_FILE}.${process.pid}`
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 })
@@ -1072,6 +1073,15 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, JSON.stringify(libraryPayload()), { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
   }
 
+  if (pathname === '/api/session') {
+    const session = sessionInfo(cookies(req)[COOKIE])
+    return send(res, 200, JSON.stringify({
+      signedIn: Boolean(session),
+      username: session?.username || null,
+      expires: session?.expires || null,
+    }), { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+  }
+
   if (pathname === '/api/listen') {
     if (!hasAuth() || !authed(req)) {
       return send(res, 401, JSON.stringify({ error: 'unauthorized' }), { 'Content-Type': 'application/json' })
@@ -1200,9 +1210,11 @@ const server = http.createServer(async (req, res) => {
     if (!form) return send(res, 400, 'Could not read progress', { 'Content-Type': 'text/plain' })
     const position = Number(readFormField(form, 'position'))
     const chapter = Number(readFormField(form, 'chapter')) || 0
-    const updated = Number(readFormField(form, 'updated')) || Date.now()
+    const rawUpdated = readFormField(form, 'updated')
+    const updated = rawUpdated ? Number(rawUpdated) : Date.now()
     if (!Number.isFinite(position) || position < 0) return send(res, 400, 'Invalid position', { 'Content-Type': 'text/plain' })
     if (!Number.isInteger(chapter) || chapter < 0) return send(res, 400, 'Invalid chapter', { 'Content-Type': 'text/plain' })
+    if (!Number.isFinite(updated) || updated <= 0 || updated > Date.now() + 60_000) return send(res, 400, 'Invalid timestamp', { 'Content-Type': 'text/plain' })
     saveProgress(id, Math.round(position * 1000) / 1000, Math.round(updated), chapter)
     return send(res, 204, '', { 'Cache-Control': 'no-store' })
   }

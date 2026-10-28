@@ -77,7 +77,7 @@ function SignedInApp({
   return (
     <div className={isPlay ? '' : 'pb-[calc(72px+env(safe-area-inset-bottom))]'}>
       {isPlay ? null : (
-        <TopBar username={username} theme={theme} preference={preference} onTheme={onTheme} onSystem={onSystem} onLogout={onLogout} />
+        <TopBar username={username} theme={theme} preference={preference} onTheme={onTheme} onSystem={onSystem} onLogout={() => { player.pause(); onLogout() }} />
       )}
       {body}
       {isPlay ? null : <MiniPlayer path={path} />}

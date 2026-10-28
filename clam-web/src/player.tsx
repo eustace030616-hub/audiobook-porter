@@ -33,6 +33,7 @@ interface PrepareOptions {
   chapterIndex?: number | null
   autoplay?: boolean
   position?: number | null
+  cachedBlob?: Blob
 }
 
 interface PlayerValue {
@@ -43,6 +44,7 @@ interface PlayerValue {
   playing: boolean
   ready: boolean
   seeking: boolean
+  error: string
   sleep: SleepTimer
   sleepRemaining: number | null
   setSleep: (value: number | 'chapter' | null) => void
@@ -97,6 +99,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   const [playing, setPlaying] = useState(false)
   const [ready, setReady] = useState(false)
   const [seeking, setSeekingState] = useState(false)
+  const [error, setError] = useState('')
   const [sleep, setSleepState] = useState<SleepTimer>(null)
   const sleepRef = useRef<SleepTimer>(null)
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null)
@@ -255,7 +258,8 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     }
     target = Math.max(0, Math.min((next.chapters.length || 1) - 1, target))
     const chapterData = chapterFor(next, target)
-    const cachedBlob = !navigator.onLine ? await getCachedBlob(cacheKey(next.id, target)).catch(() => null) : null
+    const cachedBlob = options.cachedBlob ?? (!navigator.onLine ? await getCachedBlob(cacheKey(next.id, target)).catch(() => null) : null)
+    setError('')
     const continuous = isContinuous(next) && !cachedBlob
     const mode = continuous ? 'continuous' : 'chapter'
     const sameMode = modeRef.current === mode
@@ -473,6 +477,46 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
+    let recovering = false
+    let alive = true
+    const recover = async (failed = false) => {
+      const active = bookRef.current
+      if (!active || modeRef.current !== 'continuous' || recovering) return
+      recovering = true
+      const index = chapterAt(active, audio.currentTime)
+      const source = audio.src
+      try {
+        const blob = await getCachedBlob(cacheKey(active.id, index)).catch(() => null)
+        if (!alive || audio.src !== source || bookRef.current?.id !== active.id || modeRef.current !== 'continuous' || chapterAt(active, audio.currentTime) !== index) return
+        if (!blob) {
+          if (failed) setError('Playback interrupted. Cache this chapter before going offline, or reconnect to continue.')
+          return
+        }
+        // prepare chooses the cached split file even if navigator.onLine is
+        // still true (for example, the network is up but the server is down).
+        const position = Math.max(0, audio.currentTime - chapterStart(active, index))
+        await prepare(active, { chapterIndex: index, position, autoplay: !audio.paused, cachedBlob: blob })
+      } finally {
+        recovering = false
+      }
+    }
+    const onOffline = () => { void recover() }
+    const onError = () => { void recover(true) }
+    const onWaiting = () => { if (!navigator.onLine) void recover() }
+    window.addEventListener('offline', onOffline)
+    audio.addEventListener('error', onError)
+    audio.addEventListener('waiting', onWaiting)
+    return () => {
+      alive = false
+      window.removeEventListener('offline', onOffline)
+      audio.removeEventListener('error', onError)
+      audio.removeEventListener('waiting', onWaiting)
+    }
+  }, [prepare])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
 
     const updateMetadata = (active: Book, index: number) => {
       if (!('mediaSession' in navigator)) return
@@ -669,6 +713,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     playing,
     ready,
     seeking,
+    error,
     sleep,
     sleepRemaining,
     setSleep,
@@ -683,7 +728,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     skip,
     setChapter,
     jumpChapter,
-  }), [book, chapter, current, duration, playing, ready, seeking, sleep, sleepRemaining, setSleep, speed, cycleSpeed, prepare, play, pause, toggle, seekTo, setSeeking, skip, setChapter, jumpChapter])
+  }), [book, chapter, current, duration, playing, ready, seeking, error, sleep, sleepRemaining, setSleep, speed, cycleSpeed, prepare, play, pause, toggle, seekTo, setSeeking, skip, setChapter, jumpChapter])
 
   return (
     <PlayerContext.Provider value={value}>

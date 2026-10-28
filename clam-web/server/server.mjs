@@ -10,7 +10,6 @@ const DIST = path.resolve(HERE, '..', 'dist')
 const ORIGIN = (process.env.CLAM_ORIGIN || 'http://127.0.0.1:13378').replace(/\/$/, '')
 const PORT = Number(process.env.CLAM_WEB_PORT || 13379)
 const HOSTS = (process.env.CLAM_WEB_HOST || '127.0.0.1').split(',').map((host) => host.trim()).filter(Boolean)
-const COOKIE = 'shelf_session'
 const MAX_BODY = 64 * 1024
 
 const MIME = {
@@ -37,32 +36,25 @@ function sendJson(res, status, value, headers = {}) {
   res.end(JSON.stringify(value))
 }
 
-function parseCookies(header) {
-  const out = {}
-  for (const part of String(header || '').split(';')) {
-    const index = part.indexOf('=')
-    if (index < 0) continue
-    out[part.slice(0, index).trim()] = decodeURIComponent(part.slice(index + 1).trim())
-  }
-  return out
+async function sessionFrom(req) {
+  // Only the shelf service has the signing secret. Never trust a decoded cookie.
+  const response = await fetch(`${ORIGIN}/api/session`, {
+    headers: req.headers.cookie ? { cookie: req.headers.cookie } : {},
+    signal: AbortSignal.timeout(5000),
+    redirect: 'manual',
+  })
+  if (!response.ok) throw new Error('Session validation unavailable')
+  const session = await response.json()
+  return session.signedIn ? session : null
 }
 
-function decodeSession(cookie) {
-  if (!cookie) return null
-  const split = cookie.lastIndexOf('.')
-  if (split < 0) return null
+async function sessionStatus(req, res) {
   try {
-    const data = JSON.parse(Buffer.from(cookie.slice(0, split), 'base64url').toString('utf8'))
-    if (!Number.isFinite(Number(data.expires)) || Number(data.expires) < Math.floor(Date.now() / 1000)) return null
-    const username = String(data.username || '').replace(/\s+/g, ' ').trim()
-    return { username: username || 'User' }
+    const session = await sessionFrom(req)
+    return sendJson(res, 200, session || { signedIn: false, username: null })
   } catch {
-    return null
+    return sendJson(res, 503, { error: 'Session validation unavailable' })
   }
-}
-
-function sessionFrom(req) {
-  return decodeSession(parseCookies(req.headers.cookie)[COOKIE])
 }
 
 function readBody(req) {
@@ -87,7 +79,12 @@ function readBody(req) {
 const wordCache = new Map()
 
 async function translateWord(req, res, url) {
-  const session = sessionFrom(req)
+  let session
+  try {
+    session = await sessionFrom(req)
+  } catch {
+    return sendJson(res, 503, { error: 'Session validation unavailable' })
+  }
   if (!session) return sendJson(res, 401, { error: 'Sign in first' })
   const word = (url.searchParams.get('q') || '').trim()
   const source = (url.searchParams.get('source') || 'de').trim()
@@ -234,8 +231,7 @@ function serveStatic(req, res, url) {
     return sendJson(res, 200, { ok: true, service: 'clam-web', origin: ORIGIN })
   }
   if (pathname === '/__auth/me') {
-    const session = sessionFrom(req)
-    return sendJson(res, 200, { signedIn: Boolean(session), username: session?.username || null })
+    return sessionStatus(req, res)
   }
   if (pathname === '/__auth/login' && req.method === 'POST') return login(req, res)
   if (pathname === '/__auth/logout' && req.method === 'POST') return logout(req, res)

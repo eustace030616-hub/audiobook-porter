@@ -25,8 +25,13 @@ sessions or auth:
 
 ```bash
 pnpm install
-pnpm dev            # Vite on 5173, API proxy to 127.0.0.1:13378
+pnpm start          # terminal 1: auth/API proxy on 13379; shelf must run on 13378
+pnpm dev            # terminal 2: Vite on 5173; auth/API via 13379, media via 13378
 ```
+
+The proxy can run without a production build during development. Authentication
+is validated by the shelf service's `/api/session` endpoint; deploy both servers
+together when updating this version. Subtitles are also proxied by Vite.
 
 ## Build and run
 
@@ -129,9 +134,23 @@ offline      blob URL via media-src blob:
 online       ignored; continuous file remains the playback source
 ```
 
-The service worker caches `/__auth/me` and `/api/books`, so an app that has been
-opened online can boot offline. Progress writes are local while offline; the next
+The service worker caches `/__auth/me` and `/api/books` separately from the public
+app shell, so an app opened online can boot offline until its cached session
+expires. Login and logout clear private responses; explicit logout blocks offline
+session restoration even if the logout request cannot reach the server.
+Progress writes are local while offline; the next
 online save catches the server up. Listening-time deltas are not queued.
+
+If connectivity is lost during continuous playback, the player switches to the
+cached split chapter at the current chapter-relative position. This also recovers
+from a media error when the browser still reports that it is online. A missing
+cached chapter produces a reconnect message if playback fails. Split-file chapter
+advancement still depends on JavaScript and has the iOS lock-screen limitation
+described above.
+
+Cache downloads reserve one of the three slots immediately. Replacing a chapter
+is atomic: a failed write keeps the existing chapter, and storage/download errors
+are shown in a dialog. The storage transaction also enforces capacity across tabs.
 
 
 ## Player and cache controls
@@ -174,6 +193,20 @@ same offset. The cache page at `/cache` groups downloaded chapters by book,
 shows their sizes and removes individual entries. The Shelf `Cache` button opens
 it beside `Arrange`.
 
+
+## Automated checks
+
+```bash
+pnpm build          # type-check application/tests and build production assets
+pnpm test           # progress, cache transactions, playback recovery, accessibility
+pnpm test:server    # service-worker lifecycle and real shelf/proxy/Vite integration
+# from the repository root:
+python3 -m unittest discover -s tests -v
+```
+
+The transport buttons support ordinary clicks, Enter and Space for a 15-second
+seek. Shift+Enter skips a chapter; pointer users can still hold for the same action.
+The hidden transcript is inert until Transcript mode is opened.
 
 ## Chapter transcription
 

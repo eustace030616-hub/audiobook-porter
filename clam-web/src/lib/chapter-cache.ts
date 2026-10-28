@@ -72,13 +72,27 @@ export async function getCachedBlob(key: string): Promise<Blob | null> {
   }
 }
 
-export async function putCached(meta: CachedChapterMeta, blob: Blob): Promise<void> {
+export async function putCached(meta: CachedChapterMeta, blob: Blob, replaceKey?: string): Promise<void> {
   const db = await openDb()
   try {
     const transaction = db.transaction([META, BLOBS], 'readwrite')
-    transaction.objectStore(META).put(meta)
-    transaction.objectStore(BLOBS).put(blob, meta.key)
-    await done(transaction)
+    const complete = done(transaction)
+    const entries = transaction.objectStore(META).getAll()
+    entries.onsuccess = () => {
+      const remaining = (entries.result as CachedChapterMeta[]).filter((entry) => entry.key !== meta.key && entry.key !== replaceKey)
+      if (remaining.length >= CACHE_LIMIT) {
+        transaction.abort()
+        return
+      }
+      // The deletion rolls back too if either put fails (for example, quota).
+      if (replaceKey && replaceKey !== meta.key) {
+        transaction.objectStore(META).delete(replaceKey)
+        transaction.objectStore(BLOBS).delete(replaceKey)
+      }
+      transaction.objectStore(META).put(meta)
+      transaction.objectStore(BLOBS).put(blob, meta.key)
+    }
+    await complete
   } finally {
     db.close()
   }
@@ -166,6 +180,11 @@ export function startChapterDownload(
       resumeWait?.()
       resumeWait = null
     },
-    cancel: () => controller.abort(),
+    cancel: () => {
+      controller.abort()
+      paused = false
+      resumeWait?.()
+      resumeWait = null
+    },
   }
 }
