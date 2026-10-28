@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Clam — one login, one library, series shelves, an audio player.
+ * Clam API — auth, library metadata, progress, covers and range audio.
  *
- * Deliberately small: no framework, no database, no admin pages. The files in
- * library folder are the data. `metadata.json` next to each .m4b supplies series,
- * title, chapters, and the ribbon colour.
+ * The React PWA in clam-web is the only client. Deliberately small: no framework,
+ * no database, no admin pages. The files in the library folder are the data;
+ * `metadata.json` next to each book supplies series, title, chapters and ribbon.
  */
 
 import http from 'node:http'
@@ -18,7 +18,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.HOME || process.cwd()
 const LIBRARY = path.resolve(process.env.SHELF_LIBRARY || path.join(HOME, 'shelf', 'library'))
 const DATA = path.resolve(process.env.SHELF_DATA || path.join(HOME, 'shelf', 'data'))
-const PUBLIC = path.join(HERE, 'public')
 const PORT = Number(process.env.SHELF_PORT || 13378)
 const HOST = process.env.SHELF_HOST || '0.0.0.0'
 const FFMPEG = process.env.SHELF_FFMPEG || 'ffmpeg'
@@ -252,15 +251,6 @@ function sessionHeader(username) {
 
 function clearHeader() {
   return `${COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`
-}
-
-function html(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 }
 
 function safeColor(value, fallback = '#222222') {
@@ -663,214 +653,6 @@ function libraryPayload() {
   }
 }
 
-function appShell(username = '') {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111111">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Clam</title>
-  <meta name="apple-mobile-web-app-title" content="Clam">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <script src="/static/theme.js"></script>
-  <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js" defer></script>
-</head>
-<body class="app" data-username="${html(username)}">
-  <div id="app"><div class="splash" role="status" aria-live="polite">
-    <div class="splash-top">
-      <span class="wordmark"><span class="wordmark-mark" aria-hidden="true"></span>Clam</span>
-      <span class="micro">Local edition</span>
-    </div>
-    <div class="splash-center">
-      <p class="micro">Opening shelf</p>
-      <div class="splash-line" aria-hidden="true"><span></span></div>
-    </div>
-    <div class="splash-bottom">
-      <span class="micro">Audiobooks</span>
-      <span class="micro">On this device</span>
-    </div>
-  </div></div>
-  <div id="mini" class="mini" hidden></div>
-  <dialog id="chapters-dialog" class="chapters-dialog"></dialog>
-  <dialog id="shelf-edit-dialog" class="chapters-dialog"></dialog>
-  <dialog id="book-edit-dialog" class="chapters-dialog"></dialog>
-  <audio id="audio" preload="metadata"></audio>
-</body>
-</html>`
-}
-
-/* --- pages ---------------------------------------------------------------- */
-
-function layout({ title, body, authed: signedIn, bodyClass = '', script = '' }) {
-  const lock = signedIn
-    ? `<form method="post" action="/logout" class="lock-form"><button class="link-button" type="submit">Lock</button></form>`
-    : ''
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111111">
-  <title>${html(title)}</title>
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <script src="/static/theme.js"></script>
-  <link rel="stylesheet" href="/static/style.css">
-  ${script ? `<script src="${html(script)}" defer></script>` : ''}
-</head>
-<body class="${html(bodyClass)}">
-  <div class="top">
-    <header class="masthead">
-      <a class="wordmark" href="/"><span class="wordmark-mark" aria-hidden="true"></span>Clam</a>
-      ${lock}
-    </header>
-  </div>
-  ${body}
-</body>
-</html>`
-}
-
-function authPage({ error = '' } = {}) {
-  return layout({
-    title: 'Clam',
-    authed: false,
-    bodyClass: 'auth',
-    body: `<main class="auth-main">
-      <p class="micro">Flowwing identity</p>
-      <h1 class="auth-hero">Listen.</h1>
-      <p class="auth-intro">Use your Flowwing account. The same username and password work in Bookreader.</p>
-      ${error ? `<p class="error micro" role="alert">${html(error)}</p>` : ''}
-      <form method="post" action="/login" class="auth-form">
-        <div class="field">
-          <label for="username">Username</label>
-          <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required autofocus>
-        </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="200" required>
-        </div>
-        <div class="actions">
-          <button class="primary" type="submit">Sign in</button>
-        </div>
-      </form>
-      <p class="micro auth-note">One Flowwing login for Clam and Bookreader.</p>
-    </main>`,
-  })
-}
-
-function coverMarkup(book, { link = false } = {}) {
-  const inner = `<div class="cover" style="--ribbon:${safeColor(book.ribbon)}">
-      <p class="cover-series">${html(book.coverBig)}</p>
-      <p class="cover-title">${html(book.coverSmall)}</p>
-    </div>`
-  return link
-    ? `<a class="book-link" href="/book/${book.id}" aria-label="${html(book.title)}">${inner}</a>`
-    : inner
-}
-
-function shelfPage(books) {
-  if (!books.length) {
-    return layout({
-      title: 'Clam',
-      authed: true,
-      body: `<main class="shelf-main">
-        <div class="empty">
-          <p class="micro">Empty shelf</p>
-          <h1>Nothing here yet.</h1>
-          <p class="muted">Convert and port a book, then refresh.</p>
-        </div>
-      </main>`,
-    })
-  }
-  const sections = shelves(books).map(([shelf, entries]) => {
-    const cards = entries.map((book) => `<article class="book">
-        ${coverMarkup(book, { link: true })}
-        <p class="book-author">${html(book.authors.join(', ') || 'Unknown author')}</p>
-        <p class="micro">${html([book.durationLabel, book.sequence ? `Book ${book.sequence}` : ''].filter(Boolean).join(' · '))}</p>
-      </article>`).join('')
-    return `<section class="shelf">
-      <header class="shelf-head">
-        <h2>${html(shelf)}</h2>
-        <p class="micro">${entries.length} ${entries.length === 1 ? 'book' : 'books'}</p>
-      </header>
-      <div class="rail">${cards}</div>
-    </section>`
-  }).join('')
-  return layout({
-    title: 'Clam',
-    authed: true,
-    body: `<main class="shelf-main">${sections}</main>`,
-  })
-}
-
-function bookPage(book) {
-  const chapterRows = book.chapters.length
-    ? `<ol class="chapters">${book.chapters.map((chapter, index) => `<li>
-        <button type="button" class="chapter" data-start="${chapter.start}">
-          <span class="chapter-no">${String(index + 1).padStart(2, '0')}</span>
-          <span class="chapter-name">${html(chapter.title)}</span>
-          <span class="chapter-time">${formatTime(chapter.start / 1000)}</span>
-        </button>
-      </li>`).join('')}</ol>`
-    : `<p class="muted">No chapters.</p>`
-  return layout({
-    title: `${book.title} — Clam`,
-    authed: true,
-    bodyClass: 'book-body',
-    script: '/static/player.js',
-    body: `<main class="book-main">
-      <a class="back" href="/shelf">← Your shelf</a>
-      <div class="book-layout">
-        <div class="book-cover">${coverMarkup(book)}</div>
-        <div class="book-detail">
-          <p class="micro">${html(book.shelf)}${book.sequence ? ` · Book ${html(book.sequence)}` : ''}</p>
-          <h1>${html(book.title)}</h1>
-          <p class="byline">${html(book.authors.join(', ') || 'Unknown author')}${book.narrator ? ` · read by ${html(book.narrator)}` : ''}</p>
-          ${book.description ? `<p class="description">${html(book.description)}</p>` : ''}
-          <details class="series-editor">
-            <summary>Edit series</summary>
-            <form class="series-form" method="post" action="/book/${book.id}/series">
-              <label class="sr-only" for="series">Series title</label>
-              <input id="series" name="series" value="${html(book.series === 'Standalone' ? '' : book.series)}" maxlength="80" placeholder="Standalone">
-              <button class="inline-button" type="submit">Save</button>
-            </form>
-          </details>
-          <section class="chapter-section">
-            <div class="shelf-head"><h2>Chapters</h2><p class="micro">${book.chapters.length || 0}</p></div>
-            ${chapterRows}
-          </section>
-        </div>
-      </div>
-      <div class="player" data-book="${book.id}">
-        <button class="play" id="play" type="button" aria-label="Play">Play</button>
-        <span class="time" id="current">0:00</span>
-        <input id="seek" class="seek" type="range" min="0" max="1" step="1" value="0" aria-label="Seek">
-        <span class="time" id="duration">${formatTime(book.duration)}</span>
-      </div>
-      <audio id="audio" src="/audio/${book.id}" preload="metadata"></audio>
-    </main>`,
-  })
-}
-
-function notFound(signedIn = false) {
-  return layout({
-    title: 'Not found — Clam',
-    authed: signedIn,
-    body: `<main class="empty"><p class="micro">404</p><h1>Not found.</h1><p class="muted"><a href="/">Back to the shelf</a></p></main>`,
-  })
-}
-
-function formatTime(seconds) {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}` : `${minutes}:${String(secs).padStart(2, '0')}`
-}
-
 /* --- HTTP ----------------------------------------------------------------- */
 
 function send(res, status, body, headers = {}) {
@@ -891,22 +673,8 @@ function redirect(res, location, cookie = '') {
 
 function requireAuth(req, res) {
   if (authed(req)) return true
-  redirect(res, '/login')
+  send(res, 401, 'Unauthorized', { 'Content-Type': 'text/plain; charset=utf-8' })
   return false
-}
-
-function serveStatic(req, res, pathname) {
-  const name = pathname.slice('/static/'.length)
-  if (!['style.css', 'app.js', 'player.js', 'favicon.svg', 'theme.js'].includes(name)) return send(res, 404, notFound())
-  const file = path.join(PUBLIC, name)
-  if (!fs.existsSync(file)) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
-  const type = name.endsWith('.css')
-    ? 'text/css; charset=utf-8'
-    : name.endsWith('.svg')
-      ? 'image/svg+xml'
-      : 'text/javascript; charset=utf-8'
-  res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' })
-  fs.createReadStream(file).pipe(res)
 }
 
 function serveCover(req, res, id) {
@@ -1059,11 +827,6 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/health') {
     return send(res, 200, JSON.stringify({ ok: true, books: loadBooks().length }), { 'Content-Type': 'application/json' })
-  }
-
-  if (pathname.startsWith('/static/')) {
-    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', { 'Content-Type': 'text/plain' })
-    return serveStatic(req, res, pathname)
   }
 
   if (pathname === '/api/books') {
@@ -1220,54 +983,43 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/login') {
-    if (req.method === 'GET') {
-      if (authed(req)) return redirect(res, '/')
-      return send(res, 200, authPage())
+    if (req.method !== 'POST') {
+      return send(res, 405, 'Use the Clam web client.', { 'Content-Type': 'text/plain; charset=utf-8' })
     }
-    if (req.method === 'POST') {
-      if (tooMany(ip)) return send(res, 429, authPage({ error: 'Too many attempts. Wait a minute.' }))
-      const form = await parseBody(req).catch(() => null)
-      if (!form) return send(res, 400, authPage({ error: 'Could not read the form.' }))
-      const username = cleanName(readFormField(form, 'username'))
-      const password = readFormField(form, 'password')
-      if (!username || !password) return send(res, 400, authPage({ error: 'Username and password are required.' }))
-      let response
-      try {
-        response = await fetch(AUTH_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-          signal: AbortSignal.timeout(8000),
-        })
-      } catch {
-        return send(res, 503, authPage({ error: 'Flowwing identity is unavailable. Try again.' }))
-      }
-      if (!response.ok) {
-        if (response.status === 401) {
-          failed(ip)
-          return send(res, 401, authPage({ error: 'Wrong name or password.' }))
-        }
-        return send(res, 503, authPage({ error: 'Flowwing identity is unavailable. Try again.' }))
-      }
-      const data = await response.json().catch(() => ({}))
-      const name = cleanName(data.username) || username
-      failures.delete(ip)
-      return redirect(res, '/', sessionHeader(name))
+    if (tooMany(ip)) return send(res, 429, 'Too many attempts. Wait a minute.', { 'Content-Type': 'text/plain; charset=utf-8' })
+    const form = await parseBody(req).catch(() => null)
+    if (!form) return send(res, 400, 'Could not read the form.', { 'Content-Type': 'text/plain; charset=utf-8' })
+    const username = cleanName(readFormField(form, 'username'))
+    const password = readFormField(form, 'password')
+    if (!username || !password) return send(res, 400, 'Username and password are required.', { 'Content-Type': 'text/plain; charset=utf-8' })
+    let response
+    try {
+      response = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: AbortSignal.timeout(8000),
+      })
+    } catch {
+      return send(res, 503, 'Flowwing identity is unavailable. Try again.', { 'Content-Type': 'text/plain; charset=utf-8' })
     }
-    return send(res, 405, 'Method not allowed', { 'Content-Type': 'text/plain' })
+    if (!response.ok) {
+      if (response.status === 401) {
+        failed(ip)
+        return send(res, 401, 'Wrong name or password.', { 'Content-Type': 'text/plain; charset=utf-8' })
+      }
+      return send(res, 503, 'Flowwing identity is unavailable. Try again.', { 'Content-Type': 'text/plain; charset=utf-8' })
+    }
+    const data = await response.json().catch(() => ({}))
+    const name = cleanName(data.username) || username
+    failures.delete(ip)
+    return redirect(res, '/', sessionHeader(name))
   }
-
-  if (pathname === '/setup') return redirect(res, '/login')
 
   if (pathname === '/logout') {
     if (req.method !== 'POST' && req.method !== 'GET') return send(res, 405, 'Method not allowed', { 'Content-Type': 'text/plain' })
-    return redirect(res, '/login', clearHeader())
-  }
-
-  if (pathname === '/' || pathname === '/shelf' || pathname === '/play/' || /^\/(book|play)\/[a-f0-9]+\/?$/.test(pathname)) {
-    if (!authed(req)) return redirect(res, '/login')
-    const info = sessionInfo(cookies(req)[COOKIE])
-    return send(res, 200, appShell(info?.username || ''))
+    res.writeHead(204, { 'Set-Cookie': clearHeader(), 'Cache-Control': 'no-store' })
+    return res.end()
   }
 
   if (/^\/cover\/[a-f0-9]{12}$/.test(pathname)) {
@@ -1289,12 +1041,7 @@ const server = http.createServer(async (req, res) => {
     return serveAudio(req, res, parts[0], parts[1])
   }
 
-  if (pathname === '/favicon.ico') {
-    res.writeHead(204)
-    return res.end()
-  }
-
-  send(res, 404, notFound(authed(req)))
+  send(res, 404, JSON.stringify({ error: 'Not found' }), { 'Content-Type': 'application/json; charset=utf-8' })
 })
 
 server.listen(PORT, HOST, () => {

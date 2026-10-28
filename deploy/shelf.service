@@ -1,5 +1,5 @@
 [Unit]
-Description=Shelf (one login, one library, one audio player, behind `tailscale serve`)
+Description=Clam API (auth, library, audio streaming)
 # Loopback only, like the other Pi apps. `tailscale serve` owns the tailnet
 # listener and has a real target to forward to.
 After=network-online.target tailscaled.service

@@ -1,23 +1,24 @@
 # clam-web
 
-React + Vite + TypeScript + Tailwind client for Clam, running beside the
-existing vanilla client until it is accepted.
+React + Vite + TypeScript + Tailwind client for Clam. This is the only Clam
+client; the Node service is the API and audio backend.
 
 ```
-old client   http://berry:13378   shelf/server.mjs
-new client   http://berry:13379   clam-web/server/server.mjs
+API       http://berry:13378   shelf/server.mjs
+PWA       http://berry:13379   clam-web/server/server.mjs
 ```
 
-The new server proxies the old one; it does not touch the library, progress,
-sessions or auth:
+The PWA server proxies the API and validates the session through the API's
+`/api/session` endpoint:
 
 ```
-/__auth/login    JSON wrapper around the old Flowwing form endpoint
-/__auth/logout   clears the old session cookie
-/__auth/me       decodes the session name for display only
+/__auth/login    JSON wrapper around the Flowwing form endpoint
+/__auth/logout   clears the Clam session cookie
+/__auth/me       validates the session through /api/session
 /api/*           proxied to 127.0.0.1:13378
 /audio/*         proxied, Range headers preserved
 /cover/*         proxied
+/subtitle/*      proxied
 /*               built React app, SPA fallback
 ```
 
@@ -25,13 +26,12 @@ sessions or auth:
 
 ```bash
 pnpm install
-pnpm start          # terminal 1: auth/API proxy on 13379; shelf must run on 13378
+pnpm start          # terminal 1: auth/API proxy on 13379; API must run on 13378
 pnpm dev            # terminal 2: Vite on 5173; auth/API via 13379, media via 13378
 ```
 
-The proxy can run without a production build during development. Authentication
-is validated by the shelf service's `/api/session` endpoint; deploy both servers
-together when updating this version. Subtitles are also proxied by Vite.
+The proxy can run without a production build during development. Deploy the API
+and PWA together when changing the auth contract. Subtitles are proxied by Vite.
 
 ## Build and run
 
@@ -45,10 +45,10 @@ node server/server.mjs
 
 ## QA
 
-The old client and the new client were compared at 390 × 844 and 1280 × 900
-against the same library. Home, shelf, book, play, login, user menu and chapter
-sheet were checked at both sizes; the transport, range seek, hold-to-skip,
-theme persistence and logout were exercised in Chromium.
+Home, shelf, book, play, login, cache and chapter-sheet screens are exercised at
+390 × 844 and 1280 × 900. Transport, range seek, hold-to-skip, theme persistence,
+session validation, offline recovery and chapter-cache transactions have client
+and server regression tests.
 
 ## Deploy (user service, no sudo)
 
@@ -61,20 +61,18 @@ ssh eustace@berry 'systemctl --user daemon-reload'
 ssh eustace@berry 'systemctl --user enable --now clam-web.service'
 ```
 
-Access: `http://berry:13379`. The old client remains at `:13378`.
+Access: `http://berry:13379`; the API at `:13378` serves no UI.
 
 
 ## Stack status
 
 ```
 React 19 + Vite 8 + TypeScript + Tailwind 4     follows pi-frame
-Hono + Store + fs/D1                            does not yet — this is a client preview
-proxy to the old Clam Node service              deliberate during acceptance
+Node API + filesystem library                   deliberate at this stage
 ```
 
-The preview proves the client and the visual system. It is **not yet a pi-frame app**: the API,
-auth and audio still belong to `shelf/server.mjs`. Moving them behind the `Store`/Hono seam is the
-teardown step after acceptance; until then the old service must stay up.
+The PWA is the accepted client. The Node service owns auth, library metadata,
+progress, subtitles, covers and range-streamed audio.
 
 
 ## Continuous playback (iOS lock screen)
@@ -89,9 +87,9 @@ stack advances through chapter boundaries; JS only updates the chapter label whe
 python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bin/ffmpeg
 ```
 
-The script writes `book.m4b` and `continuous_file` into `metadata.json`. The old client continues to
-use the split files; the API exposes `continuousUrl` only as an extra field, so the old client is
-unaffected until it is retired.
+The script writes `book.m4b` and `continuous_file` into `metadata.json`. The
+PWA plays the continuous file online and switches to cached split chapters when
+the connection fails.
 
 ## PWA, system theme and chapter cache
 
@@ -116,7 +114,8 @@ sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
 ```
 
 The HTTPS origin has its own cookies and localStorage, so sign in and choose the
-theme once there. The old `:13378` client and the HTTP preview keep working.
+theme once there. Plain HTTP at `http://berry:13379` remains usable without the
+service worker.
 
 ### Chapter cache
 
