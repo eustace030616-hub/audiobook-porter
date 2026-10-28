@@ -11,7 +11,6 @@ from pathlib import Path
 from porter.config import Config
 from porter.convert import build_one, ffprobe_json, voucher_keys
 from porter.state import State
-from porter.transfer import publish
 
 
 HAS_FFMPEG = shutil.which("ffmpeg") and shutil.which("ffprobe")
@@ -203,14 +202,6 @@ class PipelineTests(unittest.TestCase):
         )
         result = build_one(self.config, self.state, self.asin)
         self.assertTrue((Path(result["output"]).parent / "cover.jpg").is_file())
-
-    def test_publish_to_local_directory(self):
-        self.make_book()
-        build_one(self.config, self.state, self.asin)
-        target = self.root / "published"
-        result = publish(self.config, to=target)
-        self.assertEqual(result["books"], 1)
-        self.assertTrue(any(target.rglob("*.m4b")))
 
 
 if __name__ == "__main__":

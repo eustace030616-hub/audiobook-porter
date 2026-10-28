@@ -48,23 +48,38 @@ export function ChapterCacheProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<CachedChapterMeta[]>([])
   const [downloading, setDownloading] = useState<Record<string, DownloadState>>({})
   const downloads = useRef(new Map<string, ChapterDownload>())
+  const reservations = useRef(new Map<string, string | undefined>())
+  const entriesRef = useRef<CachedChapterMeta[]>([])
+  const initialized = useRef(false)
+  const mounted = useRef(true)
+  const [error, setError] = useState('')
   const [pending, setPending] = useState<PendingCache | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      setEntries(await listCached())
+      const next = await listCached()
+      entriesRef.current = next
+      initialized.current = true
+      if (mounted.current) setEntries(next)
     } catch {
       // Private mode or a denied quota leaves the cache unavailable.
     }
   }, [])
 
   useEffect(() => {
+    mounted.current = true
     void refresh()
+    return () => {
+      mounted.current = false
+      for (const task of downloads.current.values()) task.cancel()
+    }
   }, [refresh])
 
   const start = useCallback(
     async (book: Book, index: number, replaceKey?: string) => {
       const key = cacheKey(book.id, index)
+      if (reservations.current.has(key)) return
+      reservations.current.set(key, replaceKey)
       setDownloading((current) => ({ ...current, [key]: { progress: 0, paused: false } }))
       const task = startChapterDownload(book, index, (fraction) => {
         setDownloading((current) => ({ ...current, [key]: { progress: fraction, paused: current[key]?.paused ?? false } }))
@@ -72,6 +87,7 @@ export function ChapterCacheProvider({ children }: { children: ReactNode }) {
       downloads.current.set(key, task)
       try {
         const result = await task.promise
+        if (!mounted.current) return
         const chapter = chapterFor(book, index)
         const meta: CachedChapterMeta = {
           key,
@@ -82,13 +98,15 @@ export function ChapterCacheProvider({ children }: { children: ReactNode }) {
           type: result.type,
           cachedAt: Date.now(),
         }
-        if (replaceKey) await deleteCached(replaceKey)
-        await putCached(meta, result.blob)
+        await putCached(meta, result.blob, replaceKey)
         await refresh()
       } catch (cause) {
         console.error('Chapter cache failed', cause)
+        if (mounted.current) setError('Could not cache this chapter. Check your connection and available storage, then try again. Existing cached chapters were kept.')
       } finally {
+        reservations.current.delete(key)
         downloads.current.delete(key)
+        if (!mounted.current) return
         setDownloading((current) => {
           const next = { ...current }
           delete next[key]
@@ -102,14 +120,24 @@ export function ChapterCacheProvider({ children }: { children: ReactNode }) {
   const request = useCallback(
     (book: Book, index: number) => {
       const key = cacheKey(book.id, index)
-      if (downloading[key] !== undefined || entries.some((entry) => entry.key === key)) return
-      if (entries.length >= CACHE_LIMIT) {
-        setPending({ book, index, oldest: entries[0] })
+      const current = entriesRef.current
+      if (reservations.current.has(key) || current.some((entry) => entry.key === key)) return
+      if (!initialized.current) {
+        setError('Chapter storage is not ready. Try again in a moment.')
+        void refresh()
+        return
+      }
+      const reservedNewSlots = [...reservations.current.values()].filter((replaceKey) => !replaceKey).length
+      if (current.length + reservedNewSlots >= CACHE_LIMIT) {
+        const replacing = new Set(reservations.current.values())
+        const oldest = current.find((entry) => !replacing.has(entry.key))
+        if (oldest) setPending({ book, index, oldest })
+        else setError('All cache slots are downloading. Wait for a download to finish, then try again.')
         return
       }
       void start(book, index)
     },
-    [downloading, entries, start],
+    [refresh, start],
   )
 
   const pause = useCallback((bookId: string, index: number) => {
@@ -148,6 +176,12 @@ export function ChapterCacheProvider({ children }: { children: ReactNode }) {
   return (
     <CacheContext.Provider value={value}>
       {children}
+      <Sheet open={Boolean(error)} onClose={() => setError('')} className="cache-dialog">
+        <div className="cache-dialog__body">
+          <p role="alert">{error}</p>
+          <button type="button" className="mt-6 min-h-11 underline" onClick={() => setError('')}>Close</button>
+        </div>
+      </Sheet>
       <Sheet open={Boolean(pending)} onClose={() => setPending(null)} className="cache-dialog">
         {pending ? (
           <div className="cache-dialog__body">

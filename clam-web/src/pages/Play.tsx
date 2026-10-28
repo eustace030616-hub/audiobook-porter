@@ -188,6 +188,8 @@ export function Play({ book, search }: PlayProps) {
         </button>
       </header>
 
+      {player.error ? <p role="alert" className="mt-4 text-small text-accent">{player.error}</p> : null}
+
       <div className="play-stage relative flex min-h-0 flex-1 flex-col justify-center pt-6">
         <div>
           <div className={`transition-opacity duration-200 ${showDescription ? 'invisible' : ''}`}>
@@ -204,6 +206,8 @@ export function Play({ book, search }: PlayProps) {
 
         <div
           ref={textOverlay}
+          inert={!showDescription}
+          aria-hidden={!showDescription}
           className={`play-text-overlay absolute inset-0 overflow-y-auto bg-paper transition-opacity duration-200 ${
             showDescription ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}        >

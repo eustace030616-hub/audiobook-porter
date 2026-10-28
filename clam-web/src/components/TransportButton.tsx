@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { usePlayer } from '../player'
 
 interface TransportButtonProps {
@@ -12,6 +12,9 @@ export function TransportButton({ direction, className = '', label, children }: 
   const { skip, jumpChapter } = usePlayer()
   const timer = useRef<number | null>(null)
   const fired = useRef(false)
+  useEffect(() => () => {
+    if (timer.current !== null) window.clearTimeout(timer.current)
+  }, [])
 
   const clear = () => {
     if (timer.current) window.clearTimeout(timer.current)
@@ -29,27 +32,27 @@ export function TransportButton({ direction, className = '', label, children }: 
     }, 550)
   }
 
-  const end = () => {
-    clear()
-    if (!fired.current) skip(direction * 15)
-  }
-
   return (
     <button
       type="button"
       className={className}
-      aria-label={label}
+      aria-label={`${label}. Shift+Enter skips a chapter.`}
+      aria-keyshortcuts="Shift+Enter"
       onPointerDown={start}
-      onPointerUp={end}
-      onPointerCancel={clear}
+      onPointerUp={clear}
+      onPointerCancel={() => { clear(); fired.current = false }}
+      onClick={() => {
+        if (fired.current) fired.current = false
+        else skip(direction * 15)
+      }}
       onPointerLeave={(event) => {
         if (event.pointerType === 'mouse') clear()
       }}
       onContextMenu={(event) => event.preventDefault()}
       onKeyDown={(event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return
+        if (event.key !== 'Enter' || !event.shiftKey) return
         event.preventDefault()
-        skip(direction * 15)
+        jumpChapter(direction)
       }}
     >
       {children}

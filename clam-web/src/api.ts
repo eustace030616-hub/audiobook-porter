@@ -38,17 +38,47 @@ function form(values: Record<string, string>): URLSearchParams {
   return new URLSearchParams(values)
 }
 
-export const api = {
-  session: () => json<{ signedIn: boolean; username: string | null }>('/__auth/me'),
+const SIGNED_OUT = 'clam:signed-out'
 
-  login: (username: string, password: string) =>
-    json<{ ok: boolean; username: string }>('/__auth/login', {
+async function clearPrivateCaches(): Promise<void> {
+  if (!('caches' in window)) return
+  try {
+    const keys = await caches.keys()
+    await Promise.all(keys.filter((key) => key.startsWith('clam-private-') || key.startsWith('clam-shell-clam-v3')).map((key) => caches.delete(key)))
+  } catch {
+    // Denied browser storage must not prevent revoking the server cookie.
+    // The explicit signed-out marker also blocks offline restoration.
+  }
+}
+
+export const api = {
+  session: () => {
+    try {
+      if (localStorage.getItem(SIGNED_OUT)) return Promise.resolve({ signedIn: false, username: null })
+    } catch { /* storage may be unavailable */ }
+    return json<{ signedIn: boolean; username: string | null; expires?: number }>('/__auth/me')
+  },
+
+  login: async (username: string, password: string) => {
+    await clearPrivateCaches()
+    const result = await json<{ ok: boolean; username: string }>('/__auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
-    }),
+    })
+    try { localStorage.removeItem(SIGNED_OUT) } catch { /* storage may be unavailable */ }
+    return result
+  },
 
   logout: async () => {
+    // Remember explicit logout even if the cookie cannot be cleared offline.
+    try {
+      localStorage.setItem(SIGNED_OUT, '1')
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('shelf:pos:') || key.startsWith('shelf:position:') || key === 'shelf:last') localStorage.removeItem(key)
+      }
+    } catch { /* storage may be unavailable */ }
+    await clearPrivateCaches()
     const response = await fetch('/__auth/logout', { method: 'POST', credentials: 'same-origin' })
     if (!response.ok) throw new ApiError(await errorMessage(response), response.status)
   },
