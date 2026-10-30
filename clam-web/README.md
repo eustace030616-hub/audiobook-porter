@@ -85,9 +85,10 @@ not the default playback source. It is available only for diagnostics with
 `?continuous=1`. The public Funnel does not reliably serve the single 600 MB MP4,
 which produced a player that appeared and then disappeared.
 
-The replacement is HLS: short media segments plus a playlist, so iOS can advance
-through chapters while locked without one large response. The implementation plan
-lives in `docs/continuous-playback-plan.md`; split chapters remain the fallback.
+HLS is now packaged for HP1. Safari/iOS uses the native HLS playlist
+(`/hls/<book>/book.m3u8`); desktop Chromium keeps split chapters. Other books
+continue on split chapters until their HLS trees are built. Short segments let
+iOS advance through chapters while locked without one large response.
 
 ## PWA, system theme and chapter cache
 

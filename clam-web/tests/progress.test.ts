@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from 'vitest'
-import { audioUrl, isContinuous, savedProgress } from '../src/lib/progress'
+import { audioUrl, isContinuous, isHls, savedProgress } from '../src/lib/progress'
 import type { Book } from '../src/types'
 
 beforeEach(() => localStorage.clear())
@@ -21,6 +21,7 @@ it('uses split chapter URLs by default', () => {
     id: 'book', audioMode: 'chapters', continuousUrl: '/audio/book/continuous',
     chapters: [{ index: 0, fileVersion: 3 }, { index: 1, fileVersion: 4 }],
   } as unknown as Book
+  expect(isHls(book)).toBe(false)
   expect(isContinuous(book)).toBe(false)
   expect(audioUrl(book, 1)).toBe('/audio/book/1?v=4')
 })

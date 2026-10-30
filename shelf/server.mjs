@@ -440,6 +440,7 @@ function loadBooks() {
     let audioVersion = 0
     let audioMode = 'single'
     let continuousFile = null
+    let hlsFile = null
 
     if (split) {
       audioMode = 'chapters'
@@ -474,6 +475,13 @@ function loadBooks() {
       const continuousCandidate = path.resolve(dir, continuousName)
       if (continuousCandidate.startsWith(`${dir}${path.sep}`) && fs.existsSync(continuousCandidate)) {
         continuousFile = continuousCandidate
+      }
+      const hlsName = cleanName(meta.hls_file)
+      if (hlsName) {
+        const hlsCandidate = path.resolve(dir, hlsName)
+        if (hlsCandidate.startsWith(`${dir}${path.sep}`) && fs.existsSync(hlsCandidate)) {
+          hlsFile = hlsCandidate
+        }
       }
       if (/^[a-f0-9]{12}$/.test(String(meta.id || ''))) {
         id = meta.id
@@ -527,6 +535,7 @@ function loadBooks() {
       file: audio,
       audioMode,
       continuousFile,
+      hlsFile,
       dir,
       title,
       displayTitle: displayTitle || title,
@@ -622,6 +631,7 @@ function publicBook(book) {
     description: book.description,
     audioMode: book.audioMode,
     continuousUrl: book.continuousFile ? `/audio/${book.id}` : '',
+    hlsUrl: book.hlsFile ? `/hls/${book.id}/${path.relative(path.dirname(book.hlsFile), book.hlsFile).split(path.sep).join('/')}` : '',
     continuousVersion,
     chapters: book.chapters.map((chapter) => ({
       index: chapter.index,
@@ -732,6 +742,36 @@ function serveSubtitle(req, res, id, chapterParam) {
   }
   res.writeHead(200, { ...headers, 'Content-Length': stat.size })
   fs.createReadStream(file).pipe(res)
+}
+
+function serveHls(req, res, id, rest) {
+  const book = bookById(id)
+  if (!book?.hlsFile) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  const base = path.dirname(book.hlsFile)
+  const candidate = path.resolve(base, rest)
+  if (!candidate.startsWith(`${base}${path.sep}`)) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  let stat
+  try { stat = fs.statSync(candidate) } catch {
+    return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  }
+  if (!stat.isFile()) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+  const extension = path.extname(candidate).toLowerCase()
+  const type = extension === '.m3u8'
+    ? 'application/vnd.apple.mpegurl'
+    : extension === '.m4s'
+      ? 'video/iso.segment'
+      : extension === '.mp4'
+        ? 'video/mp4'
+        : 'application/octet-stream'
+  res.writeHead(200, {
+    'Content-Type': type,
+    'Content-Length': stat.size,
+    'Cache-Control': extension === '.m3u8' ? 'no-cache' : 'private, max-age=86400',
+    'Accept-Ranges': 'bytes',
+    'X-Content-Type-Options': 'nosniff',
+  })
+  if (req.method === 'HEAD') return res.end()
+  fs.createReadStream(candidate).on('error', () => res.destroy()).pipe(res)
 }
 
 function serveAudio(req, res, id, chapterParam) {
@@ -1032,6 +1072,15 @@ const server = http.createServer(async (req, res) => {
     const parts = pathname.slice('/subtitle/'.length).split('/')
     if (parts.length !== 2 || !parts[0]) return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
     return serveSubtitle(req, res, parts[0], parts[1])
+  }
+
+  if (pathname.startsWith('/hls/')) {
+    if (!requireAuth(req, res)) return
+    const parts = pathname.slice('/hls/'.length).split('/')
+    if (parts.length < 2 || !parts[0] || parts.slice(1).some((part) => !part || part === '..')) {
+      return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' })
+    }
+    return serveHls(req, res, parts[0], parts.slice(1).join('/'))
   }
 
   if (pathname.startsWith('/audio/')) {

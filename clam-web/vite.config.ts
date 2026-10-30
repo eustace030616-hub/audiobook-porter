@@ -9,9 +9,9 @@ export default defineConfig({
       '/__auth': 'http://127.0.0.1:13379',
       '/api': 'http://127.0.0.1:13379',
       '/audio': 'http://127.0.0.1:13378',
+      '/hls': 'http://127.0.0.1:13378',
       '/cover': 'http://127.0.0.1:13378',
       '/subtitle': 'http://127.0.0.1:13378',
-      '/static': 'http://127.0.0.1:13378',
     },
   },
   build: {

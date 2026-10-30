@@ -24,6 +24,7 @@ export interface Book {
   audioMode: 'single' | 'chapters'
   continuousUrl: string
   continuousVersion: number
+  hlsUrl?: string
   chapters: Chapter[]
   duration: number
   durationLabel: string

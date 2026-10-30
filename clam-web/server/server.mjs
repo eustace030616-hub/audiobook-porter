@@ -239,7 +239,7 @@ function serveStatic(req, res, url) {
   if (pathname === '/api/word/translate' && req.method === 'GET') {
     return translateWord(req, res, url)
   }
-  if (pathname.startsWith('/api/') || pathname.startsWith('/audio/') || pathname.startsWith('/cover/') || pathname.startsWith('/subtitle/')) {
+  if (pathname.startsWith('/api/') || pathname.startsWith('/audio/') || pathname.startsWith('/hls/') || pathname.startsWith('/cover/') || pathname.startsWith('/subtitle/')) {
     return proxy(req, res, url)
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {

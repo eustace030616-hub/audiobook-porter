@@ -95,9 +95,19 @@ export function chapterFor(book: Book | null, index: number) {
   return book.chapters[Math.max(0, Math.min(book.chapters.length - 1, index))] || null
 }
 
+export function isHls(book: Book | null): boolean {
+  if (!book?.hlsUrl || !book.chapters.length || typeof document === 'undefined') return false
+  const ua = navigator.userAgent
+  const ios = /iPhone|iPad|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR/.test(ua)
+  if (!ios && !safari) return false
+  return document.createElement('audio').canPlayType('application/vnd.apple.mpegurl') !== ''
+}
+
 export function isContinuous(book: Book | null): boolean {
-  // Split chapters are the reliable public path. Keep the continuous MP4 behind
-  // an explicit diagnostic flag until HLS replaces the single large response.
+  // HLS is a single timeline; the old continuous MP4 remains diagnostic-only.
+  if (isHls(book)) return true
   if (!book?.continuousUrl || !book.chapters.length) return false
   if (typeof window === 'undefined') return false
   return new URLSearchParams(window.location.search).get('continuous') === '1'
@@ -125,6 +135,7 @@ export function chapterAt(book: Book, absoluteSeconds: number): number {
 }
 
 export function audioUrl(book: Book, index: number): string {
+  if (isHls(book)) return book.hlsUrl as string
   if (isContinuous(book)) {
     return `${book.continuousUrl}?v=${book.continuousVersion || book.audioVersion || 0}`
   }

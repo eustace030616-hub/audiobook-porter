@@ -12,6 +12,12 @@ The immediate client change makes split chapters the default. This keeps audio
 working on the public URL; the trade-off is that chapter advancement while the
 phone is locked needs JavaScript.
 
+## Status
+
+HP1 (`Harry Potter und der Stein der Weisen`) is packaged and validated in
+WebKit: HLS source selected, chapter 2 seeked to 41s, and playback advanced.
+The client falls back to split chapters on Chromium and for books without HLS.
+
 ## Target
 
 HLS with fMP4/AAC segments:
