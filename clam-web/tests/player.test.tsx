@@ -15,6 +15,7 @@ const book = {
 } as unknown as Book
 
 beforeEach(() => {
+  window.history.replaceState({}, '', '/?continuous=1')
   localStorage.clear()
   getCachedBlob.mockResolvedValue(null)
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)

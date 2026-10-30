@@ -75,21 +75,19 @@ The PWA is the accepted client. The Node service owns auth, library metadata,
 progress, subtitles, covers and range-streamed audio.
 
 
-## Continuous playback (iOS lock screen)
+## Playback source
 
-A split chapter file cannot be advanced by JavaScript while the iPhone screen is locked: the
-`ended` event is queued until the app returns to the foreground. The new client therefore plays one
-continuous `book.m4b` per book and maps the existing chapter start/end times onto it. The OS media
-stack advances through chapter boundaries; JS only updates the chapter label when it resumes.
+The web client streams the split chapter files (`/audio/<book>/<index>`). They
+are small, range-friendly and work through the public Tailscale Funnel.
 
-```bash
-# on the Pi, after the split chapters exist
-python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bin/ffmpeg
-```
+The continuous `book.m4b` remains in the library for the lock-screen work, but is
+not the default playback source. It is available only for diagnostics with
+`?continuous=1`. The public Funnel does not reliably serve the single 600 MB MP4,
+which produced a player that appeared and then disappeared.
 
-The script writes `book.m4b` and `continuous_file` into `metadata.json`. The
-PWA plays the continuous file online and switches to cached split chapters when
-the connection fails.
+The replacement is HLS: short media segments plus a playlist, so iOS can advance
+through chapters while locked without one large response. The implementation plan
+lives in `docs/continuous-playback-plan.md`; split chapters remain the fallback.
 
 ## PWA, system theme and chapter cache
 
@@ -115,7 +113,7 @@ sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
 
 The HTTPS origin has its own cookies and localStorage, so sign in and choose the
 theme once there. Plain HTTP at `http://berry:13379` remains usable without the
-service worker.
+service worker. Split-chapter playback does not depend on the service worker.
 
 ### Chapter cache
 

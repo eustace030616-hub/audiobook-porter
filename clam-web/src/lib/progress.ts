@@ -96,7 +96,11 @@ export function chapterFor(book: Book | null, index: number) {
 }
 
 export function isContinuous(book: Book | null): boolean {
-  return Boolean(book?.continuousUrl && book.chapters.length)
+  // Split chapters are the reliable public path. Keep the continuous MP4 behind
+  // an explicit diagnostic flag until HLS replaces the single large response.
+  if (!book?.continuousUrl || !book.chapters.length) return false
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.search).get('continuous') === '1'
 }
 
 export function chapterStart(book: Book, index: number): number {
@@ -121,7 +125,9 @@ export function chapterAt(book: Book, absoluteSeconds: number): number {
 }
 
 export function audioUrl(book: Book, index: number): string {
-  if (book.continuousUrl) return `${book.continuousUrl}?v=${book.continuousVersion || book.audioVersion || 0}`
+  if (isContinuous(book)) {
+    return `${book.continuousUrl}?v=${book.continuousVersion || book.audioVersion || 0}`
+  }
   if (book.audioMode === 'chapters') {
     const chapter = chapterFor(book, index)
     return `/audio/${book.id}/${index}?v=${chapter?.fileVersion || 0}`

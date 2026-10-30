@@ -41,7 +41,7 @@ session cookie.
 The React client is the only client. It provides:
 
 - home, shelf, book, play and cache screens;
-- one continuous `book.m4b` per book for iOS lock-screen playback;
+- split chapter files for reliable public streaming; the continuous `book.m4b` is retained for the upcoming HLS work;
 - chapter-relative progress and a three-slot IndexedDB chapter cache;
 - EPUB-backed transcripts, one sentence per row, with timestamp jump buttons;
 - a word lookup card with German wordbook data and a 3-second dismissal animation;
