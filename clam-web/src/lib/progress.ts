@@ -134,9 +134,9 @@ export function chapterAt(book: Book, absoluteSeconds: number): number {
   return index
 }
 
-export function audioUrl(book: Book, index: number): string {
-  if (isHls(book)) return book.hlsUrl as string
-  if (isContinuous(book)) {
+export function audioUrl(book: Book, index: number, forceChapters = false): string {
+  if (!forceChapters && isHls(book)) return book.hlsUrl as string
+  if (!forceChapters && isContinuous(book)) {
     return `${book.continuousUrl}?v=${book.continuousVersion || book.audioVersion || 0}`
   }
   if (book.audioMode === 'chapters') {

@@ -16,7 +16,9 @@ phone is locked needs JavaScript.
 
 HP1 (`Harry Potter und der Stein der Weisen`) is packaged and validated in
 WebKit: HLS source selected, chapter 2 seeked to 41s, and playback advanced.
-The client falls back to split chapters on Chromium and for books without HLS.
+The client falls back to split chapters on Chromium, for books without HLS, and
+when an HLS source errors: it loads the network split chapter at the same
+chapter-relative position (or the cached chapter when offline).
 
 ## Target
 

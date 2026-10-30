@@ -88,7 +88,9 @@ which produced a player that appeared and then disappeared.
 HLS is now packaged for HP1. Safari/iOS uses the native HLS playlist
 (`/hls/<book>/book.m3u8`); desktop Chromium keeps split chapters. Other books
 continue on split chapters until their HLS trees are built. Short segments let
-iOS advance through chapters while locked without one large response.
+iOS advance through chapters while locked without one large response. If HLS
+fails, the player switches to the network split chapter at the same chapter
+position; offline, it uses the cached split chapter.
 
 ## PWA, system theme and chapter cache
 

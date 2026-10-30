@@ -34,6 +34,7 @@ interface PrepareOptions {
   autoplay?: boolean
   position?: number | null
   cachedBlob?: Blob
+  forceChapters?: boolean
 }
 
 interface PlayerValue {
@@ -260,7 +261,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
     const chapterData = chapterFor(next, target)
     const cachedBlob = options.cachedBlob ?? (!navigator.onLine ? await getCachedBlob(cacheKey(next.id, target)).catch(() => null) : null)
     setError('')
-    const continuous = isContinuous(next) && !cachedBlob
+    const continuous = isContinuous(next) && !cachedBlob && !options.forceChapters
     const mode = continuous ? 'continuous' : 'chapter'
     const sameMode = modeRef.current === mode
     const sameBook = bookRef.current?.id === next.id
@@ -346,7 +347,7 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       audio.src = blobUrlRef.current
       audio.load()
     } else {
-      audio.src = audioUrl(next, target)
+      audio.src = audioUrl(next, target, options.forceChapters)
       if (continuous) {
         // Set the pending seek before play so a chapter click does not briefly
         // start at chapter one. iOS accepts a seek while metadata is loading.
@@ -488,13 +489,18 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       try {
         const blob = await getCachedBlob(cacheKey(active.id, index)).catch(() => null)
         if (!alive || audio.src !== source || bookRef.current?.id !== active.id || modeRef.current !== 'continuous' || chapterAt(active, audio.currentTime) !== index) return
+        const position = Math.max(0, audio.currentTime - chapterStart(active, index))
         if (!blob) {
-          if (failed) setError('Playback interrupted. Cache this chapter before going offline, or reconnect to continue.')
+          if (!navigator.onLine) {
+            if (failed) setError('Playback interrupted. Cache this chapter before going offline, or reconnect to continue.')
+            return
+          }
+          // HLS/continuous failed but the network is available: fall back to
+          // the chapter file at the same position.
+          await prepare(active, { chapterIndex: index, position, autoplay: !audio.paused, restore: false, forceChapters: true })
           return
         }
-        // prepare chooses the cached split file even if navigator.onLine is
-        // still true (for example, the network is up but the server is down).
-        const position = Math.max(0, audio.currentTime - chapterStart(active, index))
+        // Prefer the cached split file even if navigator.onLine is still true.
         await prepare(active, { chapterIndex: index, position, autoplay: !audio.paused, cachedBlob: blob })
       } finally {
         recovering = false

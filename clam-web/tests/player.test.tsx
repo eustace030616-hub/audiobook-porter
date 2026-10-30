@@ -74,11 +74,10 @@ it('recovers a failed media request even when the browser reports online', async
   await waitFor(() => expect(audio.currentTime).toBe(25))
 })
 
-it('keeps the continuous source when no cached chapter exists and reports a failed playback', async () => {
+it('falls back to the split chapter when continuous/HLS fails without a cached blob', async () => {
   const audio = await start()
-  act(() => window.dispatchEvent(new Event('offline')))
-  await waitFor(() => expect(getCachedBlob).toHaveBeenCalled())
-  expect(audio.src).toContain('/continuous')
   act(() => audio.dispatchEvent(new Event('error')))
-  await waitFor(() => expect(player.error).toContain('Playback interrupted'))
+  await waitFor(() => expect(audio.src).toContain('/audio/123456789abc/1'))
+  await waitFor(() => expect(audio.currentTime).toBe(25))
+  expect(player.chapter).toBe(1)
 })
