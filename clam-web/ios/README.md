@@ -4,6 +4,15 @@ Capacitor 8 + Swift Package Manager. The React UI is loaded from the configured
 public Clam origin; native code owns the audio session, AirPods route recovery
 and lock-screen remote commands.
 
+## Free personal-team install
+
+1. Xcode → Settings → Accounts → add your Apple ID.
+2. Open `ios/App/App.xcodeproj`; target App → Signing & Capabilities.
+3. Select your **Personal Team**, enable automatic signing, and use a unique bundle ID if `com.eustace.clam` is taken.
+4. Connect the iPhone, enable Developer Mode, trust the Mac, then Run.
+
+The free build expires after 7 days and must be reinstalled. TestFlight and App Store distribution are not available on the free plan. If Xcode says the iOS platform is missing, install the platform component first.
+
 ## Build
 
 ```bash
