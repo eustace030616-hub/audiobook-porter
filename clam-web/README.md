@@ -5,7 +5,7 @@ client; the Node service is the API and audio backend.
 
 ```
 API       http://berry:13378   shelf/server.mjs
-PWA       http://berry:13379   clam-web/server/server.mjs
+PWA       https://clam.flowwing.uk   clam-web/server/server.mjs
 ```
 
 The PWA server proxies the API and validates the session through the API's

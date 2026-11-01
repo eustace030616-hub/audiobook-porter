@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const appUrl =
   process.env.CLAM_NATIVE_URL ||
-  'https://berry.taild3bc35.ts.net';
+  'https://clam.flowwing.uk';
 
 const config: CapacitorConfig = {
   appId: 'com.eustace.clam',

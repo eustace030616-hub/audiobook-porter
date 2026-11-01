@@ -26,7 +26,7 @@ Mac                                              berry
 
 | | |
 |---|---|
-| UI | `http://berry:13379`, or the HTTPS PWA URL above |
+| UI | `https://clam.flowwing.uk` |
 | API | `http://berry:13378` — not a UI |
 | Login | Flowwing account, same credentials as Bookreader |
 | Library | `/home/eustace/shelf/library` |
