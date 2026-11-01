@@ -13,6 +13,19 @@ import type { Book, SavedProgress, Stats } from './types'
 import { audioUrl, chapterAt, chapterDuration, chapterFor, chapterStart, isContinuous, savedProgress } from './lib/progress'
 import { cacheKey, getCachedBlob } from './lib/chapter-cache'
 
+declare global {
+  interface Window {
+    __clamNative?: {
+      isPlaying: () => boolean
+      resume: () => void
+      pause: () => void
+      toggle: () => void
+      next: () => void
+      previous: () => void
+    }
+  }
+}
+
 export type SleepTimer = { kind: 'minutes'; endsAt: number; minutes: number } | { kind: 'chapter' } | null
 
 const SPEEDS = [0.8, 1, 1.25, 1.5] as const
@@ -710,6 +723,18 @@ export function PlayerProvider({ children, onListening, onStats }: PlayerProvide
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [cancelFade, flushListening, jumpChapter, prepare, play, savePosition, seekTo, skip, startFade])
+
+  useEffect(() => {
+    window.__clamNative = {
+      isPlaying: () => Boolean(audioRef.current && !audioRef.current.paused),
+      resume: () => { void play() },
+      pause,
+      toggle,
+      next: () => jumpChapter(1),
+      previous: () => jumpChapter(-1),
+    }
+    return () => { delete window.__clamNative }
+  }, [jumpChapter, pause, play, toggle])
 
   const value = useMemo<PlayerValue>(() => ({
     book,
