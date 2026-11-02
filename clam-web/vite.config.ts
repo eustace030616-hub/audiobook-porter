@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
+import { nuvio } from "@nuvio/vite-plugin";import { defineConfig } from 'vite';
 
-const devOrigin = process.env.CLAM_DEV_ORIGIN || 'https://clam.flowwing.uk'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+const devOrigin = process.env.CLAM_DEV_ORIGIN || 'https://clam.flowwing.uk';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), nuvio()],
   server: {
     proxy: {
       '/__auth': devOrigin,
@@ -13,11 +13,11 @@ export default defineConfig({
       '/audio': devOrigin,
       '/hls': devOrigin,
       '/cover': devOrigin,
-      '/subtitle': devOrigin,
-    },
+      '/subtitle': devOrigin
+    }
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
-  },
-})
+    emptyOutDir: true
+  }, optimizeDeps: { exclude: ["@nuvio/overlay"] }
+});

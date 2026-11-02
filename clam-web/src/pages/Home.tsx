@@ -44,7 +44,7 @@ export function Home({ library, stats }: HomeProps) {
         className="flex items-baseline justify-between gap-4 border-b-2 border-rule pb-4 no-underline"
         href="/shelf"
       >
-        <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[0.94] tracking-[-0.05em]">Your shelf</h1>
+        <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[0.94] tracking-[-0.05em]" data-nuvio-id="page.title">Your shelf</h1>
         <span className="flex-none text-micro font-medium uppercase tracking-[0.14em] text-muted underline underline-offset-4">
           All books <span aria-hidden="true">→</span>
         </span>

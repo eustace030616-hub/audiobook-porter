@@ -6,6 +6,10 @@ const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root')
 createRoot(root).render(<App />)
 
+if (import.meta.env.DEV) {
+  void import('./NuvioShell').then(({ mountNuvio }) => mountNuvio())
+}
+
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {

@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "tokens": {
+    "accent": "blue",
+    "surface": "white",
+    "radius": "soft",
+    "density": "balanced",
+    "typography": "clean",
+    "buttonVariant": "solid",
+    "buttonHover": "darken",
+    "cardShadow": "none",
+    "cardHover": "none"
+  }
+}
