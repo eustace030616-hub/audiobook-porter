@@ -17,10 +17,10 @@ function lastBook(library: Library, active: Book | null): Book | null {
   return library.books.find((book) => book.id === id) || null
 }
 
-function SectionHead({ id, children, aside, dataId }: { id: string; children: ReactNode; aside?: ReactNode; dataId?: string }) {
+function SectionHead({ id, children, aside }: { id: string; children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <h2 className="micro flex-none" id={id} data-nuvio-id={dataId}>{children}</h2>
+      <h2 className="micro flex-none" id={id}>{children}</h2>
       <span className="h-px flex-1 bg-hair" aria-hidden="true" />
       {aside}
     </div>
@@ -44,14 +44,14 @@ export function Home({ library, stats }: HomeProps) {
         className="flex items-baseline justify-between gap-4 border-b-2 border-rule pb-4 no-underline"
         href="/shelf"
       >
-        <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[0.94] tracking-[-0.05em]" data-nuvio-id="page.title">Your shelf</h1>
-        <span className="flex-none text-micro font-medium uppercase tracking-[0.14em] text-muted underline underline-offset-4" data-nuvio-id="home.allbooks">
+        <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[0.94] tracking-[-0.05em]">Your shelf</h1>
+        <span className="flex-none text-micro font-medium uppercase tracking-[0.14em] text-muted underline underline-offset-4">
           All books <span aria-hidden="true">→</span>
         </span>
       </a>
 
       <section className="mt-12" aria-labelledby="continue-title">
-        <SectionHead id="continue-title" dataId="home.continue.label">Continue listening</SectionHead>
+        <SectionHead id="continue-title">Continue listening</SectionHead>
         {book ? (
           <a
             className="mt-4 grid grid-cols-[96px_minmax(0,1fr)_44px] items-center gap-6 border-b border-hair py-4 no-underline max-[680px]:grid-cols-[72px_minmax(0,1fr)_44px] max-[680px]:gap-4"
@@ -90,12 +90,12 @@ export function Home({ library, stats }: HomeProps) {
       </section>
 
       <section className="mt-12 border-t-2 border-rule pt-4" aria-labelledby="stats-title">
-        <SectionHead id="stats-title" dataId="home.stats.label" aside={<p className="micro flex-none" data-nuvio-id="home.stats.range">Mon–Sun</p>}>
+        <SectionHead id="stats-title" aside={<p className="micro flex-none">Mon–Sun</p>}>
           Listening this week
         </SectionHead>
         <div className="mt-4 flex items-baseline gap-2">
           <span className="text-[clamp(56px,12vw,96px)] font-medium leading-[0.86] tracking-[-0.06em] max-[680px]:text-[clamp(56px,18vw,88px)]">{hours}</span>
-          <span className="text-micro uppercase tracking-[0.14em] text-muted" data-nuvio-id="home.stats.unit">hours</span>
+          <span className="text-micro uppercase tracking-[0.14em] text-muted">hours</span>
         </div>
         <div className="mt-6 grid h-[104px] grid-cols-7 items-end gap-2 max-[680px]:h-[88px]">
           {bars.map((bar, barIndex) => (

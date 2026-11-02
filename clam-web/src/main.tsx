@@ -1,11 +1,10 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { NuvioSlot } from './NuvioSlot'
 import './styles.css'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root')
-createRoot(root).render(<><App /><NuvioSlot /></>)
+createRoot(root).render(<App />)
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {

@@ -271,7 +271,7 @@ export function Shelf({ library, onLibrary, reload }: ShelfProps) {
     <main className="mx-auto max-w-[calc(72rem+32px)] px-4 pt-8 pb-8" ref={container}>
       <div className="mb-8 border-b-2 border-rule pb-4">
         <a className="inline-block min-h-11 py-2 text-micro uppercase tracking-[0.12em] no-underline" href="/">← Home</a>
-        <h1 className="mt-4 text-[clamp(34px,7vw,52px)] font-medium leading-[0.95] tracking-[-0.045em]" data-nuvio-id="shelf.title">Your shelf</h1>
+        <h1 className="mt-4 text-[clamp(34px,7vw,52px)] font-medium leading-[0.95] tracking-[-0.045em]">Your shelf</h1>
         <div className="mt-2 flex items-baseline justify-between gap-4">
           <p className="micro">
             {library.books.length} {library.books.length === 1 ? 'book' : 'books'} · {shelves.length} {shelves.length === 1 ? 'shelf' : 'shelves'}

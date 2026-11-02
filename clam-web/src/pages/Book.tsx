@@ -80,7 +80,7 @@ export function Book({ book }: BookProps) {
             {book.shelf}
             {book.sequence ? ` · Book ${book.sequence}` : ''}
           </p>
-          <h1 className="mt-4 text-[clamp(32px,5vw,52px)] font-medium leading-[0.98] tracking-[-0.04em]" data-nuvio-id="book.title">{book.title}</h1>
+          <h1 className="mt-4 text-[clamp(32px,5vw,52px)] font-medium leading-[0.98] tracking-[-0.04em]">{book.title}</h1>
           <p className="mt-4 text-small text-muted">
             {book.authors.join(', ') || 'Unknown author'}
             {book.narrator ? ` · read by ${book.narrator}` : ''}
@@ -127,7 +127,7 @@ export function Book({ book }: BookProps) {
                 aria-controls="book-chapter-list"
                 onClick={() => setChaptersOpen((value) => !value)}
               >
-                <h2 className="text-[clamp(20px,3vw,28px)] font-medium leading-[1.05] tracking-[-0.025em]" data-nuvio-id="book.chapters">Chapters</h2>
+                <h2 className="text-[clamp(20px,3vw,28px)] font-medium leading-[1.05] tracking-[-0.025em]">Chapters</h2>
                 <span className="text-[clamp(20px,3vw,28px)] font-normal leading-none text-muted" aria-hidden="true">
                   {chaptersOpen ? '−' : '+'}
                 </span>
