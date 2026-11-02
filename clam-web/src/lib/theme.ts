@@ -19,7 +19,7 @@ function isTheme(value: unknown): value is Theme {
   return value === 'paper' || value === 'sepia' || value === 'night'
 }
 
-export function systemTheme(): Theme {
+function systemTheme(): Theme {
   try {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'paper'
   } catch {

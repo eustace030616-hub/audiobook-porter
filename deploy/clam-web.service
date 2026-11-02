@@ -1,5 +1,5 @@
 [Unit]
-Description=Clam Web (React client preview, port 13379)
+Description=Clam PWA and API proxy (port 13379)
 # User-level unit so it installs without sudo. Linger is enabled for eustace.
 After=network-online.target tailscaled.service
 Wants=network-online.target

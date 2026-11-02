@@ -10,10 +10,6 @@ export function clock(seconds: number): string {
     : `${minutes}:${String(secs).padStart(2, '0')}`
 }
 
-export function pad2(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
 function absoluteToProgress(book: Book, seconds: number): SavedProgress {
   if (book.audioMode !== 'chapters' || !book.chapters.length) {
     return { chapter: 0, position: Math.max(0, seconds), updated: 0 }

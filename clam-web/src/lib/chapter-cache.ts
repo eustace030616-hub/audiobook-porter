@@ -20,7 +20,7 @@ export function cacheKey(bookId: string, chapterIndex: number): string {
   return `${bookId}:${chapterIndex}`
 }
 
-export function chapterFileUrl(book: Book, index: number): string {
+function chapterFileUrl(book: Book, index: number): string {
   const chapter = book.chapters[index]
   return `/audio/${book.id}/${index}?v=${chapter?.fileVersion || 0}`
 }

@@ -3,7 +3,7 @@ interface LogoProps {
   className?: string
 }
 
-export function LogoMark({ className = '' }: { className?: string }) {
+function LogoMark({ className = '' }: { className?: string }) {
   return (
     <svg className={`logo__mark ${className}`} viewBox="0 0 48 48" aria-hidden="true">
       <path

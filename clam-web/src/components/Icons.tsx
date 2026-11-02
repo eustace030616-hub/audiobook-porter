@@ -34,14 +34,6 @@ export function ChevronIcon({ className = '', ...props }: IconProps) {
   )
 }
 
-export function ListIcon({ className = '', ...props }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} {...props}>
-      <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  )
-}
-
 export function SeekIcon({ direction, className = '' }: IconProps & { direction: -1 | 1 }) {
   return (
     <span className={`flex flex-col items-center justify-center leading-none ${className}`}>
