@@ -36,10 +36,10 @@ export function Login({ onSignedIn }: LoginProps) {
       </div>
       <main className="py-16 max-[680px]:py-8">
         <p className="micro">Flowwing identity</p>
-        <h1 className="mt-4 max-w-[10ch] text-[clamp(40px,12vw,64px)] font-medium leading-[0.94] tracking-[-0.04em]">
+        <h1 className="mt-4 max-w-[10ch] text-[clamp(40px,12vw,64px)] font-medium leading-[0.94] tracking-[-0.04em]" data-nuvio-id="login.title">
           Listen.
         </h1>
-        <p className="mt-6 max-w-[32ch] text-muted">
+        <p className="mt-6 max-w-[32ch] text-muted" data-nuvio-id="login.body">
           Use your Flowwing account. The same username and password work in Bookreader.
         </p>
         {error ? <p className="micro mt-6 max-w-[32ch] text-accent" role="alert">{error}</p> : null}
@@ -79,6 +79,7 @@ export function Login({ onSignedIn }: LoginProps) {
               type="submit"
               disabled={pending}
               className="min-h-11 border border-rule bg-ink px-6 py-3 text-small uppercase tracking-[0.06em] text-paper active:bg-paper active:text-ink disabled:opacity-60"
+              data-nuvio-id="login.submit"
             >
               {pending ? 'Signing in…' : 'Sign in'}
             </button>

@@ -1,14 +1,11 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { NuvioSlot } from './NuvioSlot'
 import './styles.css'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root')
-createRoot(root).render(<App />)
-
-if (import.meta.env.DEV) {
-  void import('./NuvioShell').then(({ mountNuvio }) => mountNuvio())
-}
+createRoot(root).render(<><App /><NuvioSlot /></>)
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {

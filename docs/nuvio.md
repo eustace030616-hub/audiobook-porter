@@ -14,7 +14,12 @@ pnpm dev
 
 Open the printed localhost URL, then use the **nuvio** chip:
 
-- **Edit** → click an element → **Preview Changes** → **Apply to Code**
+1. Click the chip to open the panel.
+2. Choose the **Edit** tab (Element). The panel opens on Brand Kit by default.
+3. Click a tagged element → **Preview Changes** → **Apply to Code**.
+
+At phone widths the nuvio panel covers the page, so click-to-select only works when the browser window is wide enough (use the Mac at ~1000px+). Element hosts currently tagged: `login.title`, `login.body`, `login.submit`, `page.title`, `shelf.title`, `book.title`, `player.chapter`.
+
 - **Make Editable** tags an element that has no `data-nuvio-id` yet
 - **Brand Kit** applies category-level styles across a page
 

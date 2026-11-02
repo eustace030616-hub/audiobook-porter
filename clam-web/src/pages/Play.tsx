@@ -215,7 +215,7 @@ export function Play({ book, search }: PlayProps) {
             <div>
               <div className="transcript__top-space" aria-hidden="true" />
               <p className="micro">Transcription · Deutsch</p>
-              <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]">{chapter?.title || book.title}</h1>
+              <h1 className="mt-2 text-[clamp(20px,5vw,26px)] font-medium leading-[1.06] tracking-[-0.03em]" data-nuvio-id="player.chapter">{chapter?.title || book.title}</h1>
               <div className="transcript mt-5">
                 {transcript.cues.map((cue, index) => (
                   <div key={`${cue.start}-${index}`} className="transcript__row">

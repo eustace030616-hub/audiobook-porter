@@ -80,7 +80,7 @@ export function Book({ book }: BookProps) {
             {book.shelf}
             {book.sequence ? ` · Book ${book.sequence}` : ''}
           </p>
-          <h1 className="mt-4 text-[clamp(32px,5vw,52px)] font-medium leading-[0.98] tracking-[-0.04em]">{book.title}</h1>
+          <h1 className="mt-4 text-[clamp(32px,5vw,52px)] font-medium leading-[0.98] tracking-[-0.04em]" data-nuvio-id="book.title">{book.title}</h1>
           <p className="mt-4 text-small text-muted">
             {book.authors.join(', ') || 'Unknown author'}
             {book.narrator ? ` · read by ${book.narrator}` : ''}
