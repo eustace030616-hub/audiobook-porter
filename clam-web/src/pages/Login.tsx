@@ -55,8 +55,7 @@ export function Login({ onSignedIn }: LoginProps) {
               spellCheck={false}
               maxLength={64}
               required
-              autoFocus
-              className="min-h-11 w-full border-0 bg-transparent py-2 text-body outline-none"
+              className="min-h-11 w-full border-0 bg-transparent py-2 text-[16px] leading-[1.4] outline-none"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
             />
@@ -70,7 +69,7 @@ export function Login({ onSignedIn }: LoginProps) {
               autoComplete="current-password"
               maxLength={200}
               required
-              className="min-h-11 w-full border-0 bg-transparent py-2 text-body outline-none"
+              className="min-h-11 w-full border-0 bg-transparent py-2 text-[16px] leading-[1.4] outline-none"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />

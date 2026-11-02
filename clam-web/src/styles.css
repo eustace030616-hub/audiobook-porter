@@ -964,3 +964,11 @@
     -webkit-mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
     mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
   }
+
+
+/* iOS zooms a focused form field when its computed font-size is below 16px. */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
