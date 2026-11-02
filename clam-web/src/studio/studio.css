@@ -1,0 +1,26 @@
+.studio-shell,
+.studio-shell > div {
+  height: 100vh;
+}
+
+.studio-shell {
+  --puck-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.studio-shell [class*="_Puck"] {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.studio-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--paper);
+  color: var(--muted);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
