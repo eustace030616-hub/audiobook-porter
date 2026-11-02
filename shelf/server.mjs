@@ -11,6 +11,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { createGzip } from 'node:zlib'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
@@ -18,8 +19,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.HOME || process.cwd()
 const LIBRARY = path.resolve(process.env.SHELF_LIBRARY || path.join(HOME, 'shelf', 'library'))
 const DATA = path.resolve(process.env.SHELF_DATA || path.join(HOME, 'shelf', 'data'))
-const PORT = Number(process.env.SHELF_PORT || 13378)
-const HOST = process.env.SHELF_HOST || '0.0.0.0'
+const PORT = Number(process.env.SHELF_PORT || 13379)
+const HOST = process.env.SHELF_HOST || '127.0.0.1'
 const FFMPEG = process.env.SHELF_FFMPEG || 'ffmpeg'
 const FFPROBE = process.env.SHELF_FFPROBE || 'ffprobe'
 const COOKIE = 'shelf_session'
@@ -31,6 +32,7 @@ const PROGRESS_FILE = path.join(DATA, 'progress.json')
 const SHELF_LABELS_FILE = path.join(DATA, 'shelves.json')
 const LISTENING_FILE = path.join(DATA, 'listening.json')
 const LAYOUT_FILE = path.join(DATA, 'layout.json')
+const WEB_DIR = path.resolve(process.env.CLAM_WEB_DIR || path.join(HERE, '..', 'clam-web', 'dist'))
 
 fs.mkdirSync(DATA, { recursive: true, mode: 0o700 })
 fs.mkdirSync(LIBRARY, { recursive: true })
@@ -663,6 +665,98 @@ function libraryPayload() {
   }
 }
 
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0
+    const chunks = []
+    req.on('data', (chunk) => {
+      size += chunk.length
+      if (size > MAX_BODY) {
+        reject(new Error('too large'))
+        req.destroy()
+        return
+      }
+      chunks.push(chunk)
+    })
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))) }
+      catch (error) { reject(error) }
+    })
+    req.on('error', reject)
+  })
+}
+
+const wordCache = new Map()
+
+async function translateWord(req, res, url) {
+  if (!hasAuth() || !authed(req)) {
+    return send(res, 401, JSON.stringify({ error: 'Sign in first' }), { 'Content-Type': 'application/json; charset=utf-8' })
+  }
+  const word = (url.searchParams.get('q') || '').trim()
+  const source = (url.searchParams.get('source') || 'de').trim()
+  const target = (url.searchParams.get('target') || 'en').trim()
+  if (source !== 'de' || target !== 'en' || !/^[\p{L}][\p{L}\p{M}'’\-]{0,63}$/u.test(word)) {
+    return send(res, 400, JSON.stringify({ error: 'Expected one German word' }), { 'Content-Type': 'application/json; charset=utf-8' })
+  }
+  const key = word.normalize('NFC').toLowerCase()
+  const hit = wordCache.get(key)
+  if (hit) return send(res, 200, JSON.stringify({ ...hit, cached: true }), { 'Content-Type': 'application/json; charset=utf-8' })
+  const upstream = new URL('https://api.mymemory.translated.net/get')
+  upstream.searchParams.set('q', word)
+  upstream.searchParams.set('langpair', 'de|en')
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 4000)
+  try {
+    const response = await fetch(upstream, { signal: controller.signal, headers: { accept: 'application/json', 'user-agent': 'Clam/0.1' } })
+    if (!response.ok) return send(res, 502, JSON.stringify({ error: 'Translation unavailable' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    const payload = await response.json()
+    const text = String(payload?.responseData?.translatedText || '').trim()
+    if (!text || text.toLowerCase() === word.toLowerCase() || /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE/i.test(text)) {
+      return send(res, 404, JSON.stringify({ error: 'No translation' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    }
+    const value = { translation: text.slice(0, 120), provider: 'MyMemory' }
+    wordCache.set(key, value)
+    if (wordCache.size > 400) wordCache.delete(wordCache.keys().next().value)
+    return send(res, 200, JSON.stringify({ ...value, cached: false }), { 'Content-Type': 'application/json; charset=utf-8' })
+  } catch {
+    return send(res, 502, JSON.stringify({ error: 'Translation unavailable' }), { 'Content-Type': 'application/json; charset=utf-8' })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+const WEB_MIME = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
+  '.woff2': 'font/woff2', '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon',
+}
+
+function serveWeb(req, res, pathname) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', { 'Content-Type': 'text/plain' })
+  const candidate = path.resolve(WEB_DIR, `.${pathname}`)
+  const inside = candidate === WEB_DIR || candidate.startsWith(`${WEB_DIR}${path.sep}`)
+  let file = inside && fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : ''
+  if (!file && !path.extname(pathname)) file = path.join(WEB_DIR, 'index.html')
+  if (!file || !fs.existsSync(file)) return send(res, 404, JSON.stringify({ error: 'Not found' }), { 'Content-Type': 'application/json; charset=utf-8' })
+  const ext = path.extname(file)
+  const gzip = /^(text|application\/(json|javascript|manifest\+json)|image\/svg)/.test(WEB_MIME[ext] || '') && /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))
+  const headers = {
+    'Content-Type': WEB_MIME[ext] || 'application/octet-stream',
+    'Cache-Control': file.endsWith('index.html') ? 'no-cache' : pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+    'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
+    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; script-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  }
+  if (gzip) headers['Content-Encoding'] = 'gzip', headers.Vary = 'Accept-Encoding'
+  res.writeHead(200, headers)
+  if (req.method === 'HEAD') return res.end()
+  const source = fs.createReadStream(file).on('error', () => res.destroy())
+  if (gzip) source.pipe(createGzip({ level: 6 })).pipe(res)
+  else source.pipe(res)
+}
+
 /* --- HTTP ----------------------------------------------------------------- */
 
 function send(res, status, body, headers = {}) {
@@ -1022,10 +1116,46 @@ const server = http.createServer(async (req, res) => {
     return send(res, 204, '', { 'Cache-Control': 'no-store' })
   }
 
-  if (pathname === '/login') {
-    if (req.method !== 'POST') {
-      return send(res, 405, 'Use the Clam web client.', { 'Content-Type': 'text/plain; charset=utf-8' })
+  if (pathname === '/__auth/me') {
+    const session = sessionInfo(cookies(req)[COOKIE])
+    return send(res, 200, JSON.stringify({ signedIn: Boolean(session), username: session?.username || null, expires: session?.expires || null }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+  }
+
+  if (pathname === '/__auth/login' && req.method === 'POST') {
+    if (tooMany(ip)) return send(res, 429, JSON.stringify({ error: 'Too many attempts. Wait a minute.' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    const payload = await readJson(req).catch(() => null)
+    if (!payload) return send(res, 400, JSON.stringify({ error: 'Could not read the form.' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    const username = cleanName(payload.username)
+    const password = String(payload.password || '')
+    if (!username || !password) return send(res, 400, JSON.stringify({ error: 'Username and password are required.' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    let response
+    try {
+      response = await fetch(AUTH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }), signal: AbortSignal.timeout(8000) })
+    } catch {
+      return send(res, 503, JSON.stringify({ error: 'Flowwing identity is unavailable. Try again.' }), { 'Content-Type': 'application/json; charset=utf-8' })
     }
+    if (!response.ok) {
+      if (response.status === 401) { failed(ip); return send(res, 401, JSON.stringify({ error: 'Wrong name or password.' }), { 'Content-Type': 'application/json; charset=utf-8' }) }
+      return send(res, 503, JSON.stringify({ error: 'Flowwing identity is unavailable. Try again.' }), { 'Content-Type': 'application/json; charset=utf-8' })
+    }
+    const data = await response.json().catch(() => ({}))
+    const name = cleanName(data.username) || username
+    failures.delete(ip)
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Set-Cookie': sessionHeader(name) })
+    return res.end(JSON.stringify({ ok: true, username: name }))
+  }
+
+  if (pathname === '/__auth/logout' && req.method === 'POST') {
+    res.writeHead(204, { 'Set-Cookie': clearHeader(), 'Cache-Control': 'no-store' })
+    return res.end()
+  }
+
+  if (pathname === '/api/word/translate' && req.method === 'GET') {
+    return translateWord(req, res, url)
+  }
+
+  if (pathname === '/login') {
+    if (req.method !== 'POST') return serveWeb(req, res, '/login')
     if (tooMany(ip)) return send(res, 429, 'Too many attempts. Wait a minute.', { 'Content-Type': 'text/plain; charset=utf-8' })
     const form = await parseBody(req).catch(() => null)
     if (!form) return send(res, 400, 'Could not read the form.', { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -1090,6 +1220,7 @@ const server = http.createServer(async (req, res) => {
     return serveAudio(req, res, parts[0], parts[1])
   }
 
+  if (pathname === '/' || pathname === '/login' || !pathname.startsWith('/api/')) return serveWeb(req, res, pathname)
   send(res, 404, JSON.stringify({ error: 'Not found' }), { 'Content-Type': 'application/json; charset=utf-8' })
 })
 

@@ -11,6 +11,7 @@ User=eustace
 Group=eustace
 WorkingDirectory=/home/eustace/shelf/app
 ExecStart=/usr/local/bin/node server.mjs
+Environment=CLAM_WEB_DIR=/home/eustace/shelf/clam-web/dist
 Environment=SHELF_LIBRARY=/home/eustace/shelf/library
 Environment=SHELF_DATA=/home/eustace/shelf/data
 Environment=SHELF_PORT=13378

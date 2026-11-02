@@ -1,26 +1,11 @@
 # clam-web
 
-React + Vite + TypeScript + Tailwind client for Clam. This is the only Clam
-client; the Node service is the API and audio backend.
+React + Vite + TypeScript + Tailwind client for Clam. Production is one Node
+server: `shelf/server.mjs` serves the built `dist/` and the API on `:13378`;
+Cloudflare Tunnel publishes it at `https://clam.flowwing.uk`.
 
-```
-API       http://berry:13378   shelf/server.mjs
-PWA       https://clam.flowwing.uk   clam-web/server/server.mjs
-```
-
-The PWA server proxies the API and validates the session through the API's
-`/api/session` endpoint:
-
-```
-/__auth/login    JSON wrapper around the Flowwing form endpoint
-/__auth/logout   clears the Clam session cookie
-/__auth/me       validates the session through /api/session
-/api/*           proxied to 127.0.0.1:13378
-/audio/*         proxied, Range headers preserved
-/cover/*         proxied
-/subtitle/*      proxied
-/*               built React app, SPA fallback
-```
+`server/server.mjs` remains as a development/test proxy only and is not a
+production daemon.
 
 ## Local development
 
@@ -33,15 +18,14 @@ pnpm dev            # terminal 2: Vite on 5173; auth/API via 13379, media via 13
 The proxy can run without a production build during development. Deploy the API
 and PWA together when changing the auth contract. Subtitles are proxied by Vite.
 
-## Build and run
+## Build
 
 ```bash
 pnpm build
-CLAM_ORIGIN=http://127.0.0.1:13378 \\
-CLAM_WEB_PORT=13379 \\
-CLAM_WEB_HOST=127.0.0.1 \\
-node server/server.mjs
 ```
+
+Production serves `dist/` from `shelf/server.mjs`; `pnpm start` remains useful
+only for proxy tests.
 
 ## QA
 
@@ -50,19 +34,16 @@ Home, shelf, book, play, login, cache and chapter-sheet screens are exercised at
 session validation, offline recovery and chapter-cache transactions have client
 and server regression tests.
 
-## Deploy (user service, no sudo)
-
-The production copy lives at `/home/eustace/shelf/clam-web`:
+## Production deploy
 
 ```bash
+pnpm build
 rsync -az --delete dist/ eustace@berry:~/shelf/clam-web/dist/
-rsync -az server/ eustace@berry:~/shelf/clam-web/server/
-ssh eustace@berry 'systemctl --user daemon-reload'
-ssh eustace@berry 'systemctl --user enable --now clam-web.service'
+rsync -az ../shelf/ eustace@berry:~/shelf/app/
+ssh eustace@berry 'sudo systemctl restart shelf'
 ```
 
-Access: `http://berry:13379`; the API at `:13378` serves no UI.
-
+The public URL is `https://clam.flowwing.uk`; `clam-web.service` is retired.
 
 ## Stack status
 
@@ -78,11 +59,11 @@ progress, subtitles, covers and range-streamed audio.
 ## Playback source
 
 The web client streams the split chapter files (`/audio/<book>/<index>`). They
-are small, range-friendly and work through the public Tailscale Funnel.
+are small, range-friendly and work through the public Cloudflare Tunnel.
 
 The continuous `book.m4b` remains in the library for the lock-screen work, but is
 not the default playback source. It is available only for diagnostics with
-`?continuous=1`. The public Funnel does not reliably serve the single 600 MB MP4,
+`?continuous=1`. The public Tunnel does not reliably serve the single 600 MB MP4,
 which produced a player that appeared and then disappeared.
 
 HLS is now packaged for HP1. Safari/iOS uses the native HLS playlist
@@ -104,27 +85,16 @@ theme                  default follows prefers-color-scheme; Auto returns to it
 chapter cache          IndexedDB, split chapter files, 3 slots, oldest evicted
 ```
 
-The service worker only registers in a secure context. `http://berry:13379` is
-plain HTTP, so the worker is skipped there. Add to Home Screen may still create
-a shortcut, but there is no offline shell. To use the installed PWA and the
-offline shell, serve the same app through Tailscale HTTPS:
-
-```bash
-sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
-# then open https://berry.taild3bc35.ts.net/
-```
-
-The HTTPS origin has its own cookies and localStorage, so sign in and choose the
-theme once there. Plain HTTP at `http://berry:13379` remains usable without the
-service worker. Split-chapter playback does not depend on the service worker.
+The service worker registers on the HTTPS Cloudflare origin. There is no
+plain-HTTP production client.
 
 ### Chapter cache
 
 Each chapter row (Book page and chapter sheet) has a download control. The
 first three chapters are stored as split chapter files in IndexedDB; a fourth
 download opens a prompt naming the oldest cached chapter before replacing it.
-Cached chapters are used only when the browser is offline; online playback still
-uses the continuous `book.m4b` so lock-screen chapter advance stays native.
+Cached chapters are used when the browser is offline or HLS/network playback fails.
+Online Safari playback uses HLS when packaged; other clients use split chapters.
 
 ```
 key          bookId:chapterIndex

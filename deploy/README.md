@@ -1,60 +1,45 @@
 # berry deployment
 
-Clam is two processes: a loopback Node API and a React PWA proxy.
+Clam is two daemons:
 
-| App | Unit | Bind | Exposure |
-|---|---|---|---|
-| shelf API | `shelf.service` (system) | `127.0.0.1:13378` | internal; media/auth API |
-| clam-web | `clam-web.service` (user) | `127.0.0.1:13379` | `tailscale serve` / PWA |
+| Unit | Bind | Job |
+|---|---|---|
+| `shelf.service` (system) | `127.0.0.1:13378` | PWA, auth, API, covers, subtitles, audio, HLS |
+| `cloudflared.service` (system) | outbound | public `https://clam.flowwing.uk` |
 
-The old vanilla client is gone. Port `13378` no longer serves a UI.
+`clam-web` and the two queue services are disabled. Their code and data remain,
+but they are not part of the running system.
 
 ## Layout
 
 ```
 /home/eustace/shelf/
-  app/          server.mjs only
-  data/         session-secret, progress.json, listening.json,
-                shelves.json, layout.json
+  app/          server.mjs
+  data/         session-secret, progress.json, listening.json, shelves, layout
   bin/          ffmpeg + ffprobe
-  library/      Author/Title/cover.jpg, metadata.json, chapters/01.m4b…
+  library/      Author/Title/cover.jpg, metadata.json, chapters/, hls/
   clam-web/
-    dist/       built React PWA
-    server/     static + API proxy on 13379
+    dist/       built React PWA, served by shelf
+    server/     legacy dev proxy, not a production unit
 ```
 
-## Deploy both services
+## Deploy
 
 ```bash
-# API
 rsync -az --delete shelf/ eustace@berry:~/shelf/app/
-ssh eustace@berry 'sudo systemctl restart shelf'
-
-# PWA
 rsync -az --delete clam-web/dist/ eustace@berry:~/shelf/clam-web/dist/
-rsync -az clam-web/server/ eustace@berry:~/shelf/clam-web/server/
-ssh eustace@berry 'systemctl --user restart clam-web'
+ssh eustace@berry 'sudo systemctl restart shelf'
 ```
 
-Authentication is validated by the API's `/api/session` endpoint, so a PWA
-deploy that lands before the API update will return `503` until the API is also
-updated.
+The system unit sets `CLAM_WEB_DIR=/home/eustace/shelf/clam-web/dist` and
+`SHELF_PORT=13378`. Cloudflare Tunnel routes `clam.flowwing.uk` to
+`http://127.0.0.1:13378`.
 
-## Service notes
-
-`shelf.service` is the system unit at `/etc/systemd/system/shelf.service`; it is
-loopback-only. `clam-web.service` is a user unit with linger enabled, also
-loopback-only.
-
-PWA/offline support needs HTTPS:
+## Retired units
 
 ```bash
-sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
-# https://berry.taild3bc35.ts.net/
+systemctl --user disable --now clam-web clam-ingest clam-transcribe
 ```
 
-`http://berry:13379` works as a plain-HTTP client but does not register the
-service worker.
-
-The old Audiobookshelf service remains stopped and disabled; its files are under
-`~/audiobookshelf`. Port `13378` belongs to the Clam API.
+Ingest and transcription remain runnable as explicit jobs; they are no longer
+always-on services.

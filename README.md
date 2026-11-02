@@ -1,37 +1,31 @@
 # Clam
 
-A single-user audiobook shelf with a React PWA, a small Node API, and a Pi-side
-library. The old vanilla client has been removed; the Node service is now the
-API/audio backend only.
+A single-user audiobook shelf with a React PWA, one Node service, and a Pi-side
+library. One process serves the PWA, API, covers, transcripts, Range audio and
+HLS; Cloudflare Tunnel exposes it at `https://clam.flowwing.uk`.
 
 ## What is running
 
 ```
 Mac                                              berry
 ┌─────────────────────────────┐     rsync       ┌──────────────────────────────┐
-│ m4b + cover + metadata.json │ ──────────────▶ │ Clam API                      │
-└─────────────────────────────┘                 │ 127.0.0.1:13378               │
-                                                │ auth · library · range audio  │
+│ m4b + cover + metadata.json │ ──────────────▶ │ Clam                         │
+└─────────────────────────────┘                 │ 127.0.0.1:13378              │
+                                                │ PWA · auth · API · audio/HLS │
                                                 │ ~/shelf/library               │
                                                 └──────────────┬───────────────┘
-                                                               │ proxy
-                                                ┌──────────────▼───────────────┐
-                                                │ Clam PWA                     │
-                                                │ 127.0.0.1:13379              │
-                                                │ React · service worker       │
-                                                └──────────────┬───────────────┘
-                                                               │
-                                                    https://berry.taild3bc35.ts.net/
+                                                               │ cloudflared
+                                                    https://clam.flowwing.uk
 ```
 
 | | |
 |---|---|
 | UI | `https://clam.flowwing.uk` |
-| API | `http://berry:13378` — not a UI |
-| Login | Flowwing account, same credentials as Bookreader |
+| API | same origin |
+| Login | Flowwing account |
 | Library | `/home/eustace/shelf/library` |
-| API service | `shelf.service` (systemd system) |
-| UI service | `clam-web.service` (systemd user, linger enabled) |
+| Daemon | `shelf.service` |
+| Public ingress | `cloudflared.service` |
 
 The Flowwing password is never stored on the Pi. The API keeps only a signed
 session cookie.
@@ -52,18 +46,18 @@ Build and run locally:
 
 ```bash
 cd clam-web
-pnpm install
 pnpm build
-CLAM_ORIGIN=http://127.0.0.1:13378 \
-CLAM_WEB_PORT=13379 \
-node server/server.mjs
+cd ..
+CLAM_WEB_DIR=clam-web/dist SHELF_PORT=13379 SHELF_LIBRARY=... SHELF_DATA=... \
+  node shelf/server.mjs
 ```
 
-The API must be running on `13378`. Vite development uses the same proxy:
+The single server needs the built `dist/`, the library and the data directory.
+Vite remains a development tool:
 
 ```bash
-pnpm start   # API proxy on 13379
-pnpm dev     # Vite on 5173
+cd clam-web
+pnpm dev
 ```
 
 ## Library
@@ -94,9 +88,8 @@ python3 scripts/make_continuous.py --library ~/shelf/library --ffmpeg ~/shelf/bi
 
 Clam delegates login to Flowwing. The API posts the username and password to
 `CLAM_AUTH_URL` (default `http://127.0.0.1:3100/api/auth/login`) and keeps a
-signed session cookie. The proxy validates that cookie through `/api/session`
-on every auth check. Deploy `shelf/` and `clam-web/` together when changing this
-contract.
+signed session cookie. The same process validates the cookie for API, media and
+PWA requests.
 
 ## Deploy
 
@@ -108,17 +101,9 @@ rsync -az --delete shelf/ eustace@berry:~/shelf/app/
 ssh eustace@berry 'sudo systemctl restart shelf'
 
 rsync -az --delete clam-web/dist/ eustace@berry:~/shelf/clam-web/dist/
-rsync -az clam-web/server/ eustace@berry:~/shelf/clam-web/server/
-ssh eustace@berry 'systemctl --user restart clam-web'
 ```
 
-PWA/offline support needs HTTPS:
-
-```bash
-sudo tailscale serve --bg --https=443 http://127.0.0.1:13379
-```
-
-Then open `https://berry.taild3bc35.ts.net/`.
+Cloudflare Tunnel publishes `https://clam.flowwing.uk`.
 
 ## Tests
 
@@ -134,5 +119,5 @@ python3 -m unittest discover -s tests -v
 
 `clam-web/tests` covers progress ordering, chapter-cache transactions, offline
 playback recovery, auth/session behavior and accessible transport controls.
-`tests/web-server.test.mjs` starts the real shelf and proxy services against a
-fixture library.
+`tests/web-server.test.mjs` starts the legacy dev proxy against the real shelf
+service and fixture library.

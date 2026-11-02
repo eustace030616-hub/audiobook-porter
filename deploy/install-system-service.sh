@@ -16,4 +16,4 @@ sleep 1
 curl -fsS http://127.0.0.1:13378/health
 echo
 echo "Clam API is loopback-only on 127.0.0.1:13378."
-echo "The PWA is served at https://berry.taild3bc35.ts.net/ via 127.0.0.1:13379."
+echo "Cloudflare Tunnel publishes the PWA at https://clam.flowwing.uk."
